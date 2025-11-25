@@ -390,6 +390,7 @@ Validates that Terraform/OpenTofu resources have required tags with correct case
 - **Required Tags** - Enforce specific tags on all taggable resources
 - **Case Sensitivity** - Validate exact case for tag keys (e.g., "Environment" not "environment")
 - **Allowed Values** - Restrict tag values to a predefined list with case-sensitive validation
+- **Pattern Validation** - Use regex patterns to enforce tag value formats (e.g., email, cost center, ticket ID)
 - **Optional Tags** - Validate case sensitivity for optional tags when present
 - **Multi-Provider Support** - Built-in support for AWS, Azure, GCP, Oracle Cloud with 100+ taggable resources
 - **Flexible Configuration** - Use YAML config file or JSON command-line arguments
@@ -400,25 +401,44 @@ Create a `.terraform-tags.yaml` configuration file:
 
 ```yaml
 required_tags:
+  # Exact match validation with allowed values
   - name: Environment
     allowed_values:
       - Development
       - Staging
       - Production
+
+  # Pattern validation for email format
   - name: Owner
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  # Pattern validation for cost center format (CC-####)
   - name: CostCenter
+    pattern: "^CC-[0-9]{4}$"
+
+  # Pattern validation for ticket ID format (PROJECT-###)
+  - name: TicketID
+    pattern: "^[A-Z]+-[0-9]+$"
 
 optional_tags:
   - name: Project
   - name: Description
 ```
 
+**Common pattern examples:**
+
+- **Email**: `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$`
+- **Cost Center** (CC-####): `^CC-[0-9]{4}$`
+- **Ticket ID** (PROJ-###): `^[A-Z]+-[0-9]+$`
+- **Date** (YYYY-MM-DD): `^[0-9]{4}-[0-9]{2}-[0-9]{2}$`
+- **Version** (v#.#.#): `^v[0-9]+\\.[0-9]+\\.[0-9]+$`
+
 Add to your `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
-    rev: v1.0.0
+    rev: v0.1.0
     hooks:
       - id: check-terraform-tags
         args: [--config, .terraform-tags.yaml]
@@ -454,29 +474,65 @@ Or use inline JSON arguments:
 #### Example Valid Tags
 
 ```hcl
-# AWS resource with required tags
+# ✅ PASS - AWS resource with required tags (allowed values + patterns)
 resource "aws_instance" "web" {
   ami           = "ami-12345678"
   instance_type = "t2.micro"
 
   tags = {
-    Environment = "Production"  # Correct case, valid value
-    Owner       = "team@example.com"
-    CostCenter  = "CC-1234"
-    Project     = "WebApp"  # Optional tag
+    Environment = "Production"           # Matches allowed value
+    Owner       = "team@example.com"     # Matches email pattern
+    CostCenter  = "CC-1234"              # Matches CC-#### pattern
+    TicketID    = "JIRA-5678"            # Matches PROJECT-### pattern
+    Project     = "WebApp"               # Optional tag
   }
 }
 
-# GCP resource uses "labels" instead of "tags"
+# ✅ PASS - GCP resource uses "labels" instead of "tags"
 resource "google_compute_instance" "app" {
   name         = "app-server"
   machine_type = "n1-standard-1"
 
   labels = {
-    Environment = "Development"
-    Owner       = "gcp-team@example.com"
-    CostCenter  = "CC-5678"
+    Environment = "Development"          # Matches allowed value
+    Owner       = "gcp-team@example.com" # Matches email pattern
+    CostCenter  = "CC-5678"              # Matches CC-#### pattern
+    TicketID    = "INFRA-100"            # Matches PROJECT-### pattern
   }
+}
+```
+
+#### Pattern Validation Examples
+
+```hcl
+# ✅ PASS - Valid email pattern
+tags = {
+  Owner = "admin@example.com"
+}
+
+# ❌ FAIL - Invalid email (missing @ symbol)
+tags = {
+  Owner = "admin.example.com"  # Error: does not match pattern
+}
+
+# ✅ PASS - Valid cost center pattern
+tags = {
+  CostCenter = "CC-1234"
+}
+
+# ❌ FAIL - Invalid cost center (missing CC- prefix)
+tags = {
+  CostCenter = "1234"  # Error: does not match pattern ^CC-[0-9]{4}$
+}
+
+# ✅ PASS - Valid ticket ID pattern
+tags = {
+  TicketID = "JIRA-5678"
+}
+
+# ❌ FAIL - Invalid ticket ID (lowercase letters)
+tags = {
+  TicketID = "jira-5678"  # Error: does not match pattern ^[A-Z]+-[0-9]+$
 }
 ```
 
@@ -503,14 +559,36 @@ resource "aws_vpc" "main" {
   }
 }
 
-# ❌ FAIL: Invalid tag value
+# ❌ FAIL: Invalid allowed value
 resource "azurerm_resource_group" "main" {
   name     = "my-rg"
   location = "East US"
   tags = {
-    Environment = "Testing"  # Not in allowed values
+    Environment = "Testing"  # Not in allowed values [Development, Staging, Production]
     Owner       = "team@example.com"
     CostCenter  = "CC-1234"
+  }
+}
+
+# ❌ FAIL: Invalid pattern (email format)
+resource "aws_instance" "app" {
+  ami           = "ami-12345"
+  instance_type = "t2.micro"
+  tags = {
+    Environment = "Production"
+    Owner       = "admin"  # Does not match email pattern
+    CostCenter  = "CC-1234"
+  }
+}
+
+# ❌ FAIL: Invalid pattern (cost center format)
+resource "aws_ebs_volume" "data" {
+  availability_zone = "us-east-1a"
+  size              = 10
+  tags = {
+    Environment = "Production"
+    Owner       = "admin@example.com"
+    CostCenter  = "1234"  # Missing CC- prefix, does not match ^CC-[0-9]{4}$
   }
 }
 ```
@@ -546,7 +624,7 @@ Runs Terraform/OpenTofu unit tests (`terraform test` or `tofu test`) as part of 
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
-    rev: v1.0.0
+    rev: v0.1.0
     hooks:
       - id: check-tofu-unit-tests
         stages: [pre-push]  # Recommended: run on push, not every commit
@@ -608,7 +686,7 @@ Runs Terraform/OpenTofu integration tests (`terraform test` or `tofu test`) as p
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
-    rev: v1.0.0
+    rev: v0.1.0
     hooks:
       - id: check-tofu-integration-tests
         stages: [pre-push]  # Recommended: run on push, not every commit
@@ -703,7 +781,7 @@ This hook works with both Terraform and OpenTofu since they share the same HCL s
 
 MIT License
 
-Copyright (c) 2025 Thomas M. Atwood
+&copy; 2025, Thomas M. Atwood, CFA
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -66,18 +66,24 @@ The most flexible option is to use a YAML configuration file:
 ```yaml
 # .terraform-tags.yaml
 required_tags:
-  # Tag with restricted values
+  # Tag with restricted values (exact match)
   - name: Environment
     allowed_values:
       - Development
       - Staging
       - Production
 
-  # Tag with any value (just must be non-empty)
+  # Tag with regex pattern validation (email format)
   - name: Owner
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
 
-  # Another required tag
+  # Tag with pattern validation (cost center format: CC-####)
   - name: CostCenter
+    pattern: "^CC-[0-9]{4}$"
+
+  # Tag with pattern validation (ticket ID: PROJECT-###)
+  - name: TicketID
+    pattern: "^[A-Z]+-[0-9]+$"
 
 optional_tags:
   # These are checked for case sensitivity if present
@@ -145,6 +151,61 @@ python src/check_terraform_tags.py \
 1. **Not required** to be present
 2. **Case-sensitive keys** (if present): "Project" ≠ "project"
 3. **No value validation**: Any value allowed
+
+### Pattern Validation
+
+Pattern validation uses regular expressions to enforce specific formats for tag values:
+
+1. **Use `pattern` for flexible validation** - Define a regex pattern that tag values must match
+2. **Common patterns**:
+   - **Email**: `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+   - **Cost Center** (CC-####): `^CC-[0-9]{4}$`
+   - **Ticket ID** (PROJ-###): `^[A-Z]+-[0-9]+$`
+   - **Date** (YYYY-MM-DD): `^[0-9]{4}-[0-9]{2}-[0-9]{2}$`
+   - **Version** (v#.#.#): `^v[0-9]+\.[0-9]+\.[0-9]+$`
+3. **Pattern vs allowed_values**: Use `allowed_values` for exact matches, `pattern` for format validation
+4. **Invalid patterns** are caught and reported clearly
+
+**Example configuration:**
+
+```yaml
+required_tags:
+  # Exact match validation
+  - name: Environment
+    allowed_values: [Development, Staging, Production]
+
+  # Pattern validation for email format
+  - name: Owner
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  # Pattern validation for cost center format
+  - name: CostCenter
+    pattern: "^CC-[0-9]{4}$"
+```
+
+**Pattern validation examples:**
+
+```hcl
+# ✅ PASS - Matches email pattern
+tags = {
+  Owner = "admin@example.com"
+}
+
+# ❌ FAIL - Does not match email pattern
+tags = {
+  Owner = "admin"  # Missing @domain
+}
+
+# ✅ PASS - Matches CC-#### pattern
+tags = {
+  CostCenter = "CC-1234"
+}
+
+# ❌ FAIL - Does not match CC-#### pattern
+tags = {
+  CostCenter = "1234"  # Missing CC- prefix
+}
+```
 
 ### Taggable Resources
 

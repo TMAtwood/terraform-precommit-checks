@@ -10,19 +10,28 @@ required_tags:
       - Staging
       - Production
 
-  # Tag with any value (just must be non-empty)
+  # Tag with regex pattern validation (email format)
+  # Note: Use 'pattern' for flexible validation with regex
   - name: Owner
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
 
-  # Another tag with any value
+  # Tag with pattern validation (cost center format: CC-####)
   - name: CostCenter
+    pattern: "^CC-[0-9]{4}$"
 
   # Tag with specific allowed values
+  # Note: Use 'allowed_values' for exact match validation
   - name: Compliance
     allowed_values:
       - PCI-DSS
       - HIPAA
       - SOC2
       - None
+
+  # Additional example: Pattern for ticket/issue tracking (e.g., JIRA-1234, PROJ-567)
+  # Uncomment to use:
+  # - name: TicketID
+  #   pattern: "^[A-Z]+-[0-9]+$"
 
 # Optional tags - if present, must use correct case
 # These are not required but will be validated for case sensitivity if used

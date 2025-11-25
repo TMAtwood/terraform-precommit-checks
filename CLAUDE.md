@@ -200,7 +200,8 @@ The tag validation checker validates resource tags/labels for compliance:
    - Validates tag keys match exact case (case-sensitive)
    - Ensures tag values are non-empty
    - If `allowed_values` specified, validates values match exactly (case-sensitive)
-   - Reports helpful errors for case mismatches and missing tags
+   - If `pattern` specified, validates values against regex pattern
+   - Reports helpful errors for case mismatches, missing tags, and pattern violations
 
 6. **Optional Tag Validation** (`validate_optional_tags()`):
    - Only validates if optional tag is present
@@ -218,8 +219,11 @@ The tag validation checker validates resource tags/labels for compliance:
    ```yaml
    required_tags:
      - name: "Environment"
-       allowed_values: ["Development", "Staging", "Production"]  # Optional
-     - name: "Owner"  # Any value allowed
+       allowed_values: ["Development", "Staging", "Production"]  # Exact match
+     - name: "Owner"
+       pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"  # Email format
+     - name: "CostCenter"
+       pattern: "^CC-[0-9]{4}$"  # CC-#### format
    optional_tags:
      - name: "Project"
    taggable_resources:  # Optional: extend/override defaults

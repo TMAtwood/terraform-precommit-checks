@@ -69,17 +69,31 @@ def run_tag_tests() -> list:
             "Valid tags - all required tags present (should pass)",
             "test_tags_valid.tf",
             True,
+            ".terraform-tags-test.yaml",
         ),
         (
             "Invalid tags - various violations (should fail)",
             "test_tags_invalid.tf",
             False,
+            ".terraform-tags-test.yaml",
+        ),
+        (
+            "Valid tags with patterns - patterns match (should pass)",
+            "test_tags_patterns_valid.tf",
+            True,
+            ".terraform-tags-patterns-test.yaml",
+        ),
+        (
+            "Invalid tags with patterns - patterns don't match (should fail)",
+            "test_tags_patterns_invalid.tf",
+            False,
+            ".terraform-tags-patterns-test.yaml",
         ),
     ]
 
     results = []
-    for test_name, file_path, should_pass in tests:
-        passed = run_tag_test(test_name, file_path, should_pass)
+    for test_name, file_path, should_pass, config_file in tests:
+        passed = run_tag_test(test_name, file_path, should_pass, config_file)
         results.append(passed)
 
     return results
