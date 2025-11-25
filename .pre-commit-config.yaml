@@ -110,20 +110,19 @@ repos:
     hooks:
       - id: check-provider-config
         name: Check for old-style provider configurations
-        entry: check-provider-config
-        language: python
+        entry: python -m src.check_provider_config
+        language: system
         files: \.tf$
         exclude: ^(test/.*old.*\.tf|examples/example_multi_cloud_root\.tf)$
         pass_filenames: true
         description: |
           Detects old-style provider configurations that prevent module-level
           for_each and depends_on in Terraform/OpenTofu modules.
-        additional_dependencies: ['.']
 
       - id: check-tofu-unit-tests
         name: Run Terraform/OpenTofu unit tests
-        entry: check-tofu-unit-tests
-        language: python
+        entry: python -m src.check_tofu_unit_tests
+        language: system
         pass_filenames: false
         always_run: true
         stages: [manual]
@@ -132,12 +131,11 @@ repos:
           Use --test-dir to specify a custom test directory.
           Use --command=tofu or --command=terraform to explicitly choose which tool to use.
           By default, tries tofu first, then falls back to terraform.
-        additional_dependencies: ['.']
 
       - id: check-tofu-integration-tests
         name: Run Terraform/OpenTofu integration tests
-        entry: check-tofu-integration-tests
-        language: python
+        entry: python -m src.check_tofu_integration_tests
+        language: system
         pass_filenames: false
         always_run: true
         description: |
@@ -145,12 +143,11 @@ repos:
           Use --test-dir to specify a custom integration test directory.
           Use --command=tofu or --command=terraform to explicitly choose which tool to use.
           By default, tries tofu first, then falls back to terraform.
-        additional_dependencies: ['.']
 
       - id: check-module-versions
         name: Check for conflicting module versions
-        entry: check-module-versions
-        language: python
+        entry: python -m src.check_module_versions
+        language: system
         files: \.tf$
         exclude: ^test/test_module_conflicts\.tf$
         pass_filenames: true
@@ -158,12 +155,11 @@ repos:
         description: |
           Detects conflicting module versions or git refs in Terraform/OpenTofu.
           Ensures all references to the same module use consistent versions.
-        additional_dependencies: ['.']
 
       - id: check-tfsort
         name: Check if files are sorted per tfsort conventions
-        entry: check-tfsort
-        language: python
+        entry: python -m src.check_tfsort
+        language: system
         files: (variables|outputs)\.tf$
         exclude: ^test/
         pass_filenames: true
@@ -171,12 +167,11 @@ repos:
           Verifies that variable and output blocks in .tf files are sorted
           alphabetically as per tfsort conventions. Checks outputs.tf and
           variables.tf files to ensure proper sorting.
-        additional_dependencies: ['.']
 
       - id: check-terraform-tags
         name: Validate Terraform resource tags
-        entry: check-terraform-tags
-        language: python
+        entry: python -m src.check_terraform_tags
+        language: system
         files: \.tf$
         exclude: ^test/
         pass_filenames: true
@@ -188,7 +183,6 @@ repos:
           Validates that Terraform/OpenTofu resources have required tags with correct
           case sensitivity and allowed values. Supports AWS, Azure, GCP, Oracle Cloud,
           and all other providers.
-        additional_dependencies: ['.', 'PyYAML>=6.0']
 
       - id: pytest
         name: Run all test suites
