@@ -1,0 +1,135 @@
+# Example Terraform Tags Configuration
+# Copy this file to .terraform-tags.yaml and customize for your organization
+
+# Required tags - must be present on all taggable resources
+required_tags:
+  # Tag with restricted allowed values (case-sensitive)
+  - name: Environment
+    allowed_values:
+      - Development
+      - Staging
+      - Production
+
+  # Tag with any value (just must be non-empty)
+  - name: Owner
+
+  # Another tag with any value
+  - name: CostCenter
+
+  # Tag with specific allowed values
+  - name: Compliance
+    allowed_values:
+      - PCI-DSS
+      - HIPAA
+      - SOC2
+      - None
+
+# Optional tags - if present, must use correct case
+# These are not required but will be validated for case sensitivity if used
+optional_tags:
+  - name: Project
+  - name: Description
+  - name: Team
+  - name: ManagedBy
+
+# Taggable resources by provider
+# If not specified, uses built-in defaults for AWS, Azure, GCP, OCI
+# You can extend or override the default lists here
+taggable_resources:
+  aws:
+    # Compute
+    - aws_instance
+    - aws_launch_template
+    - aws_ami
+
+    # Storage
+    - aws_ebs_volume
+    - aws_s3_bucket
+    - aws_efs_file_system
+
+    # Networking
+    - aws_vpc
+    - aws_subnet
+    - aws_security_group
+    - aws_lb
+
+    # Database
+    - aws_db_instance
+    - aws_dynamodb_table
+    - aws_rds_cluster
+
+    # Container & Serverless
+    - aws_ecs_cluster
+    - aws_eks_cluster
+    - aws_lambda_function
+
+    # Add more as needed...
+
+  azurerm:
+    # Compute
+    - azurerm_linux_virtual_machine
+    - azurerm_windows_virtual_machine
+
+    # Storage
+    - azurerm_storage_account
+    - azurerm_managed_disk
+
+    # Networking
+    - azurerm_virtual_network
+    - azurerm_network_security_group
+    - azurerm_public_ip
+
+    # Database
+    - azurerm_postgresql_flexible_server
+    - azurerm_mysql_flexible_server
+    - azurerm_cosmosdb_account
+
+    # Resource Management
+    - azurerm_resource_group
+
+    # Container
+    - azurerm_kubernetes_cluster
+
+    # Add more as needed...
+
+  google:
+    # Note: GCP uses "labels" instead of "tags"
+    # Compute
+    - google_compute_instance
+    - google_compute_disk
+
+    # Networking
+    - google_compute_network
+    - google_compute_subnetwork
+
+    # Storage
+    - google_storage_bucket
+
+    # Database
+    - google_sql_database_instance
+
+    # Container
+    - google_container_cluster
+
+    # Add more as needed...
+
+  oci:
+    # Compute
+    - oci_core_instance
+    - oci_core_volume
+
+    # Networking
+    - oci_core_vcn
+    - oci_core_subnet
+
+    # Storage
+    - oci_objectstorage_bucket
+
+    # Database
+    - oci_database_db_system
+    - oci_database_autonomous_database
+
+    # Container
+    - oci_containerengine_cluster
+
+    # Add more as needed...

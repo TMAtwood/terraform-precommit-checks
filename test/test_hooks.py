@@ -30,8 +30,8 @@ def run_test(
     print(f"Testing: {test_name}")
     print(f"{'=' * 80}")
 
-    # Get the path to the checker script (in parent directory)
-    script_dir = Path(__file__).parent.parent
+    # Get the path to the checker script (in src directory)
+    script_dir = Path(__file__).parent.parent / "src"
     checker_script = script_dir / script_name
 
     result = subprocess.run(  # nosec B603 B607

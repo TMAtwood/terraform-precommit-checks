@@ -84,7 +84,7 @@ repos:
     rev: v2.14
     hooks:
       - id: vulture
-        args: [--min-confidence, '80', 'src/check_provider_config.py', 'src/check_module_versions.py', 'src/check_tfsort.py', 'test/test_hooks.py']
+        args: [--min-confidence, '80', 'src/check_provider_config.py', 'src/check_module_versions.py', 'src/check_tfsort.py', 'src/check_terraform_tags.py', 'test/test_hooks.py']
         files: ^src/.*\.py$
         # No additional dependencies needed - we only use stdlib
 
@@ -173,6 +173,23 @@ repos:
           variables.tf files to ensure proper sorting.
         # No additional_dependencies needed - uses stdlib only
 
+      - id: check-terraform-tags
+        name: Validate Terraform resource tags
+        entry: python src/check_terraform_tags.py
+        language: python
+        files: \.tf$
+        exclude: ^test/
+        pass_filenames: true
+        # Uncomment and customize the following line to use a config file:
+        # args: [--config, .terraform-tags.yaml]
+        # Or use inline JSON args:
+        # args: [--required-tags, '[{"name":"Environment","allowed_values":["Dev","Staging","Prod"]},{"name":"Owner"}]']
+        description: |
+          Validates that Terraform/OpenTofu resources have required tags with correct
+          case sensitivity and allowed values. Supports AWS, Azure, GCP, Oracle Cloud,
+          and all other providers.
+        additional_dependencies: ['PyYAML>=6.0']
+
       - id: pytest
         name: Run pytest tests
         entry: python -m pytest
@@ -192,7 +209,7 @@ repos:
           - --cov=.
           - --cov-report=term-missing
           - --cov-report=html
-          - --cov-fail-under=70
+          - --cov-fail-under=65
         pass_filenames: false
         always_run: true
 

@@ -61,3 +61,16 @@
   always_run: true
   stages: [pre-push]
   minimum_pre_commit_version: '4.0.0'
+
+- id: check-terraform-tags
+  name: Validate Terraform resource tags
+  description: |
+    Validates that Terraform/OpenTofu resources have required tags with correct
+    case sensitivity and allowed values. Supports AWS, Azure, GCP, Oracle Cloud,
+    and all other providers. Can be configured via .terraform-tags.yaml file or
+    command-line arguments.
+  entry: check-terraform-tags
+  language: python
+  files: \.tf$
+  pass_filenames: true
+  minimum_pre_commit_version: '4.0.0'
