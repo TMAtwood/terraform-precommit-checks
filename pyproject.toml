@@ -5,11 +5,10 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "terraform-provider-convention-checker"
-version = "1.0.0"
-description = "Pre-commit hook to detect old-style Terraform/OpenTofu provider configurations"
+name = "terraform-precommit-checks"
+description = "A collection of OpenTofu/Terraform pre-commit checks designed to standardize patterns, catch issues early, and keep your Terraform modules easy to maintain."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 authors = [
     {name = "Thomas M Atwood"}
 ]
@@ -19,24 +18,20 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Programming Language :: Python :: 3.15",
     "Topic :: Software Development :: Quality Assurance",
 ]
 
 # Optional dependencies
 [project.optional-dependencies]
 dev = [
-    "pre-commit>=4.0.0",
-    "pytest>=9.0.0",
+    "pre-commit>=4.5.0",
+    "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
-    "types-PyYAML>=6.0",
+    "types-PyYAML>=6.0.12",
 ]
 
 [project.scripts]
