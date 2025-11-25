@@ -26,13 +26,14 @@ repos:
       - id: destroyed-symlinks
       - id: detect-private-key
       - id: end-of-file-fixer
-      - id: file-contents-sorter
       - id: fix-byte-order-marker
       - id: forbid-new-submodules
       - id: forbid-submodules
       - id: mixed-line-ending
         args: ['--fix=lf']
       - id: name-tests-test
+        args: ['--pytest-test-first']
+        files: ^test/.*\.py$
       - id: no-commit-to-branch
         args: [--branch, develop, --branch, main, --branch, master]
       - id: pretty-format-json

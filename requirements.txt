@@ -1,22 +1,4 @@
-# Python dependencies for Terraform Provider Convention Checker
-
-# Pre-commit framework for running hooks
-# Pre-commit manages its own isolated environments for hooks
 pre-commit>=4.5.0
-
-# Testing framework and coverage (for local development)
-# Optional: only needed if running tests locally with pytest
 pytest>=9.0.1
 pytest-cov>=7.0.0
-
-# YAML parsing for tag validation configuration
-# Required by check_terraform_tags.py for loading .terraform-tags.yaml config files
-PyYAML>=6.0
-
-# Note: Most hooks use NO external dependencies and only use Python standard library:
-# - check_provider_config.py (stdlib only)
-# - check_module_versions.py (stdlib only)
-# - check_tfsort.py (stdlib only)
-# - check_tofu_unit_tests.py (stdlib only)
-# - check_tofu_integration_tests.py (stdlib only)
-# - check_terraform_tags.py (requires PyYAML for config file parsing)
+PyYAML>=6.0.3
