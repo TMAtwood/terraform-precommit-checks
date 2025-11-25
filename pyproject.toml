@@ -1,8 +1,8 @@
 # pyproject.toml - Python project configuration
 
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_backend"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "terraform-provider-convention-checker"
@@ -24,15 +24,18 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Software Development :: Quality Assurance",
 ]
 
 # Optional dependencies
 [project.optional-dependencies]
 dev = [
-    "pre-commit>=4.4.0",
+    "pre-commit>=4.0.0",
     "pytest>=9.0.0",
-    "pytest-cov>=6.0.0",
+    "pytest-cov>=7.0.0",
 ]
 
 [project.scripts]
@@ -73,7 +76,7 @@ ignore = []
 
 # MyPy configuration
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
