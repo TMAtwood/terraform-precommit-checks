@@ -46,26 +46,26 @@ fi
 git tag -a "$VERSION_TAG" -m "Release $VERSION_TAG"
 echo "✓ Created tag $VERSION_TAG"
 
-# Delete the previous 'latest' tag from remote first
-echo "Removing previous 'latest' tag from remote..."
-git push origin :refs/tags/latest 2>/dev/null || true
-echo "✓ Deleted previous 'latest' tag from remote"
+# # Delete the previous 'latest' tag from remote first
+# echo "Removing previous 'latest' tag from remote..."
+# git push origin :refs/tags/latest 2>/dev/null || true
+# echo "✓ Deleted previous 'latest' tag from remote"
 
-# Delete the local 'latest' tag if it exists
-if git rev-parse latest >/dev/null 2>&1; then
-    git tag -d latest
-    echo "✓ Deleted previous 'latest' tag locally"
-fi
+# # Delete the local 'latest' tag if it exists
+# if git rev-parse latest >/dev/null 2>&1; then
+#     git tag -d latest
+#     echo "✓ Deleted previous 'latest' tag locally"
+# fi
 
-# Create 'latest' tag pointing to the new version tag
-git tag -a latest -m "Latest release: $VERSION_TAG"
-echo "✓ Created 'latest' tag pointing to $VERSION_TAG"
+# # Create 'latest' tag pointing to the new version tag
+# git tag -a latest -m "Latest release: $VERSION_TAG"
+# echo "✓ Created 'latest' tag pointing to $VERSION_TAG"
 
 # Push tags to remote
 echo "Pushing tags to remote..."
 git push origin "$VERSION_TAG"
-git push origin latest
-echo "✓ Tags pushed to remote"
+# git push origin latest
+echo "✓ Tag pushed to remote"
 
 echo ""
-echo "Success! Version $VERSION_TAG is now tagged as 'latest'"
+echo "Success! Version $VERSION_TAG is now tagged."
