@@ -185,14 +185,15 @@ Examples:
         print(f"📁 Using specified integration test directory: {test_dir}")
     else:
         print("🔍 Auto-detecting integration test directory...")
-        test_dir = find_integration_test_directory()
-        if not test_dir:
+        test_dir_result = find_integration_test_directory()
+        if not test_dir_result:
             print("❌ ERROR: Could not auto-detect integration test directory!")
             print(
                 "   Please specify --test-dir or create an 'integration_tests/',"
                 " 'integration/', or similar directory"
             )
             return 1
+        test_dir = test_dir_result
         print(f"📁 Found integration test directory: {test_dir}")
 
     print("")

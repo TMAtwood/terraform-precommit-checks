@@ -176,11 +176,12 @@ Examples:
         print(f"📁 Using specified test directory: {test_dir}")
     else:
         print("🔍 Auto-detecting test directory...")
-        test_dir = find_test_directory()
-        if not test_dir:
+        test_dir_result = find_test_directory()
+        if not test_dir_result:
             print("❌ ERROR: Could not auto-detect test directory!")
             print("   Please specify --test-dir or create a 'tests/' or 'test/' directory")
             return 1
+        test_dir = test_dir_result
         print(f"📁 Found test directory: {test_dir}")
 
     print("")
