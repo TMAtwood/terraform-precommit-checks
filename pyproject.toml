@@ -36,6 +36,7 @@ dev = [
     "pre-commit>=4.0.0",
     "pytest>=9.0.0",
     "pytest-cov>=7.0.0",
+    "types-PyYAML>=6.0",
 ]
 
 [project.scripts]
@@ -44,6 +45,7 @@ check-module-versions = "check_module_versions:main"
 check-tfsort = "check_tfsort:main"
 check-tofu-unit-tests = "check_tofu_unit_tests:main"
 check-tofu-integration-tests = "check_tofu_integration_tests:main"
+check-terraform-tags = "check_terraform_tags:main"
 
 # Bandit security configuration
 [tool.bandit]
@@ -92,6 +94,10 @@ warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
 
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
+
 # Pytest configuration
 [tool.pytest.ini_options]
 testpaths = ["test"]
@@ -109,7 +115,7 @@ markers = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["."]
+source = ["src"]
 omit = [
     "test/*",
     "venv/*",

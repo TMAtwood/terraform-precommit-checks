@@ -48,25 +48,34 @@ When Terraform/OpenTofu modules use direct `provider "name" { }` blocks (old pat
    - Tries `tofu` first, then falls back to `terraform` (or use `--command` to specify)
    - Manual stage hook - run with `pre-commit run check-tofu-integration-tests`
 
-6. **.pre-commit-config.yaml** - Pre-commit framework configuration (for local development)
+6. **check_terraform_tags.py** - Terraform resource tag validation hook
+   - Main class: `TerraformTagChecker`
+   - Validates required tags are present on all taggable resources
+   - Enforces case-sensitive tag keys and values
+   - Supports allowed values lists with case-sensitive validation
+   - Works with all providers (AWS tags, Azure tags, GCP labels, etc.)
+   - Flexible configuration via YAML file or JSON command-line arguments
+   - Includes comprehensive built-in lists of taggable resources for AWS, Azure, GCP, Oracle Cloud
+
+7. **.pre-commit-config.yaml** - Pre-commit framework configuration (for local development)
    - Defines all local hooks that run on `.tf` files
    - Includes Python quality, security, and testing hooks
    - Can be extended with additional Terraform hooks (terraform_fmt, terraform_validate, etc.)
 
-7. **.pre-commit-hooks.yaml** - Remote hook definitions
+8. **.pre-commit-hooks.yaml** - Remote hook definitions
    - Defines hooks for remote usage when installed via `repos:` in other projects
    - Specifies hook IDs, entry points, file patterns, and minimum pre-commit version
    - Used when others install this repository as a pre-commit dependency
 
-8. **setup.sh** - Automated installation script (Bash)
+9. **setup.sh** - Automated installation script (Bash)
    - Checks for prerequisites (pre-commit, git)
    - Copies files and installs hooks
    - Runs initial validation
 
-9. **verify_multi_cloud.sh** - Multi-provider verification script (Bash)
-   - Demonstrates provider-agnostic detection across AWS, Azure, GCP, Oracle
+10. **verify_multi_cloud.sh** - Multi-provider verification script (Bash)
+    - Demonstrates provider-agnostic detection across AWS, Azure, GCP, Oracle
 
-10. **create_version_tag.sh** - Version tagging script (Bash)
+11. **create_version_tag.sh** - Version tagging script (Bash)
     - Creates semantic version tags (e.g., v1.0.0)
     - Moves 'latest' tag to the new version
     - Supports GitVersion integration for automatic version detection
@@ -156,6 +165,68 @@ The tfsort checker verifies alphabetical sorting of Terraform blocks:
    - Uses regex to match these files: `(variables|outputs)\.tf$`
    - Can check any `.tf` file containing variable or output blocks
 
+#### Tag Validation Checker
+
+The tag validation checker validates resource tags/labels for compliance:
+
+1. **Configuration Loading** (`_load_config()`):
+   - Loads from YAML file (`.terraform-tags.yaml`) or JSON command-line arguments
+   - Priority: command-line args > config file > defaults
+   - Supports PyYAML for YAML parsing, fallback to JSON if PyYAML not available
+   - Includes default comprehensive lists of taggable resources for AWS, Azure, GCP, Oracle Cloud
+
+2. **Resource Detection** (`RESOURCE_BLOCK_PATTERN`):
+   - Pattern: `r'^\s*resource\s+"([^"]+)"\s+"([^"]+)"\s*\{'`
+   - Finds all resource blocks in `.tf` files
+   - Extracts resource type and name
+   - Checks if resource type is in taggable resources list
+
+3. **Taggable Resource Identification** (`is_taggable_resource()`):
+   - Maintains provider-specific lists of taggable resources
+   - AWS: 100+ resources (uses `tags` attribute)
+   - Azure: 40+ resources (uses `tags` attribute)
+   - GCP: 30+ resources (uses `labels` attribute, not `tags`)
+   - Oracle Cloud: 10+ resources
+   - Can be extended/overridden in configuration
+
+4. **Tag Extraction** (`extract_tags_from_resource()`):
+   - Finds `tags = {}` or `labels = {}` blocks within resources
+   - Parses static tag key-value pairs
+   - Skips dynamic tags using `merge()`, `var.`, or `local.`
+   - Returns dict of tags or None for dynamic tags
+
+5. **Required Tag Validation** (`validate_required_tags()`):
+   - Checks all required tags are present
+   - Validates tag keys match exact case (case-sensitive)
+   - Ensures tag values are non-empty
+   - If `allowed_values` specified, validates values match exactly (case-sensitive)
+   - Reports helpful errors for case mismatches and missing tags
+
+6. **Optional Tag Validation** (`validate_optional_tags()`):
+   - Only validates if optional tag is present
+   - Checks tag key case sensitivity
+   - Does not validate values (any value allowed)
+   - Helps catch typos like "project" vs "Project"
+
+7. **Provider-Specific Handling** (`get_tag_attribute_name()`):
+   - AWS/Azure/Oracle: uses `tags`
+   - GCP: uses `labels`
+   - Automatically detects from resource type prefix
+
+8. **Configuration Schema**:
+
+   ```yaml
+   required_tags:
+     - name: "Environment"
+       allowed_values: ["Development", "Staging", "Production"]  # Optional
+     - name: "Owner"  # Any value allowed
+   optional_tags:
+     - name: "Project"
+   taggable_resources:  # Optional: extend/override defaults
+     aws: [...]
+     azurerm: [...]
+   ```
+
 ## Common Development Commands
 
 ### Testing the hooks
@@ -174,6 +245,13 @@ python check_module_versions.py --exclude-dir test/ main.tf
 python check_tfsort.py test/test_tfsort_sorted_variables.tf
 python check_tfsort.py test/test_tfsort_unsorted.tf  # Should fail
 
+# Test tag validation checker
+python src/check_terraform_tags.py --config test/.terraform-tags-test.yaml test/test_tags_valid.tf  # Should pass
+python src/check_terraform_tags.py --config test/.terraform-tags-test.yaml test/test_tags_invalid.tf  # Should fail
+
+# Test tag validation with inline JSON args
+python src/check_terraform_tags.py --required-tags '[{"name":"Environment","allowed_values":["Development","Staging","Production"]},{"name":"Owner"}]' test/test_tags_valid.tf
+
 # Test multiple providers
 python check_provider_config.py test/*.tf
 
@@ -181,6 +259,7 @@ python check_provider_config.py test/*.tf
 pre-commit run check-provider-config --all-files
 pre-commit run check-module-versions --all-files
 pre-commit run check-tfsort --all-files
+pre-commit run check-terraform-tags --all-files
 
 # Run all pre-commit hooks
 pre-commit run --all-files

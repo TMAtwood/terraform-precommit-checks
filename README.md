@@ -7,8 +7,9 @@ This repository provides pre-commit hooks for Terraform/OpenTofu projects:
 1. **Provider Configuration Checker** - Detects old-style provider configurations that prevent `for_each` and `depends_on` at the module level
 2. **Module Version Checker** - Ensures consistent module versions across all references
 3. **TFSort Checker** - Verifies variables and outputs are alphabetically sorted per tfsort conventions
-4. **TOFU Unit Test Runner** - Ensures Terraform/OpenTofu unit tests pass before commits/pushes
-5. **TOFU Integration Test Runner** - Runs integration tests for comprehensive validation
+4. **Tag Validation Checker** - Validates resource tags for compliance with required tags, case sensitivity, and allowed values
+5. **TOFU Unit Test Runner** - Ensures Terraform/OpenTofu unit tests pass before commits/pushes
+6. **TOFU Integration Test Runner** - Runs integration tests for comprehensive validation
 
 **Provider-Agnostic:** These tools work universally with any Terraform provider - whether you're using AWS, Azure, Google Cloud, Oracle Cloud, VMware, Kubernetes, or any of the 3,000+ providers in the Terraform Registry.
 
@@ -87,16 +88,18 @@ Add this repository to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
-    rev: v1.0.0  # Use a specific version tag or branch
+    rev: v0.1.0  # Use a specific version tag or branch
     hooks:
       - id: check-provider-config
       - id: check-module-versions
       - id: check-tfsort
+      - id: check-terraform-tags
+        args: [--config, .terraform-tags.yaml]  # Optional: specify config file
       # Optional: Add test hooks (run on push, not every commit)
       # - id: check-tofu-unit-tests
-      #   stages: [manual]
+      #   stages: [pre-push]
       # - id: check-tofu-integration-tests
-      #   stages: [manual]
+      #   stages: [pre-push]
 ```
 
 Then install the pre-commit hooks:
@@ -376,7 +379,153 @@ tfsort variables.tf
 tfsort -r .
 ```
 
-### 4. TOFU Unit Test Runner (`check-tofu-unit-tests`)
+### 4. Tag Validation Checker (`check-terraform-tags`)
+
+#### Description
+
+Validates that Terraform/OpenTofu resources have required tags with correct case sensitivity and allowed values. Works universally with AWS (tags), Azure (tags), GCP (labels), Oracle Cloud, and all other providers.
+
+#### Features
+
+- **Required Tags** - Enforce specific tags on all taggable resources
+- **Case Sensitivity** - Validate exact case for tag keys (e.g., "Environment" not "environment")
+- **Allowed Values** - Restrict tag values to a predefined list with case-sensitive validation
+- **Optional Tags** - Validate case sensitivity for optional tags when present
+- **Multi-Provider Support** - Built-in support for AWS, Azure, GCP, Oracle Cloud with 100+ taggable resources
+- **Flexible Configuration** - Use YAML config file or JSON command-line arguments
+
+#### Quick Start
+
+Create a `.terraform-tags.yaml` configuration file:
+
+```yaml
+required_tags:
+  - name: Environment
+    allowed_values:
+      - Development
+      - Staging
+      - Production
+  - name: Owner
+  - name: CostCenter
+
+optional_tags:
+  - name: Project
+  - name: Description
+```
+
+Add to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
+    rev: v1.0.0
+    hooks:
+      - id: check-terraform-tags
+        args: [--config, .terraform-tags.yaml]
+```
+
+Or use inline JSON arguments:
+
+```yaml
+- id: check-terraform-tags
+  args:
+    - --required-tags
+    - '[{"name":"Environment","allowed_values":["Dev","Staging","Prod"]},{"name":"Owner"}]'
+    - --optional-tags
+    - '[{"name":"Project"}]'
+```
+
+#### What It Validates
+
+✅ **Checks performed:**
+
+- All required tags are present on taggable resources
+- Tag keys match exact case (case-sensitive)
+- Tag values are non-empty
+- Tag values match allowed list (if specified, case-sensitive)
+- Optional tags use correct case (if present)
+
+⏭️ **Skips validation for:**
+
+- Non-taggable resources (based on comprehensive built-in lists)
+- Dynamic tags using `merge()`, `var.`, or `local.`
+- Test files (configurable with `exclude:`)
+
+#### Example Valid Tags
+
+```hcl
+# AWS resource with required tags
+resource "aws_instance" "web" {
+  ami           = "ami-12345678"
+  instance_type = "t2.micro"
+
+  tags = {
+    Environment = "Production"  # Correct case, valid value
+    Owner       = "team@example.com"
+    CostCenter  = "CC-1234"
+    Project     = "WebApp"  # Optional tag
+  }
+}
+
+# GCP resource uses "labels" instead of "tags"
+resource "google_compute_instance" "app" {
+  name         = "app-server"
+  machine_type = "n1-standard-1"
+
+  labels = {
+    Environment = "Development"
+    Owner       = "gcp-team@example.com"
+    CostCenter  = "CC-5678"
+  }
+}
+```
+
+#### Common Validation Errors
+
+```hcl
+# ❌ FAIL: Missing required tag
+resource "aws_s3_bucket" "data" {
+  bucket = "my-bucket"
+  tags = {
+    Environment = "Production"
+    Owner       = "team@example.com"
+    # Missing: CostCenter
+  }
+}
+
+# ❌ FAIL: Wrong case for tag key
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+  tags = {
+    environment = "Production"  # Should be "Environment"
+    Owner       = "team@example.com"
+    CostCenter  = "CC-1234"
+  }
+}
+
+# ❌ FAIL: Invalid tag value
+resource "azurerm_resource_group" "main" {
+  name     = "my-rg"
+  location = "East US"
+  tags = {
+    Environment = "Testing"  # Not in allowed values
+    Owner       = "team@example.com"
+    CostCenter  = "CC-1234"
+  }
+}
+```
+
+#### Documentation
+
+See [docs/TAG_VALIDATION.md](docs/TAG_VALIDATION.md) for:
+
+- Complete configuration reference
+- Advanced usage examples
+- Provider-specific notes
+- CI/CD integration
+- Troubleshooting guide
+
+### 5. TOFU Unit Test Runner (`check-tofu-unit-tests`)
 
 #### Description
 

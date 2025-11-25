@@ -31,8 +31,10 @@ echo "--------------------------------------------------------------------------
 cd "$SCRIPT_DIR" || return 1
 python -m pytest test/test_provider_config.py test/test_module_versions.py test/test_tfsort.py \
     test/test_tofu_unit_tests.py test/test_tofu_integration_tests.py \
-    --cov=check_provider_config --cov=check_module_versions --cov=check_tfsort \
-    --cov=check_tofu_unit_tests --cov=check_tofu_integration_tests \
+    test/test_check_terraform_tags_unit.py \
+    --cov=src.check_provider_config --cov=src.check_module_versions --cov=src.check_tfsort \
+    --cov=src.check_tofu_unit_tests --cov=src.check_tofu_integration_tests \
+    --cov=check_terraform_tags \
     --cov-report=term --cov-report=html -v
 TEST_EXIT_CODE=$?
 if [ $TEST_EXIT_CODE -ne 0 ]; then
