@@ -53,7 +53,7 @@ repos:
     rev: v1.18.2
     hooks:
       - id: mypy
-        files: ^(src/check_provider_config\.py|src/check_module_versions\.py|src/check_tfsort\.py|test/test_hook\.py)$
+        files: ^src/.*\.py$
         # No additional dependencies needed - we only use stdlib
 
   # Security: Bandit - finds common security issues
@@ -63,7 +63,7 @@ repos:
       - id: bandit
         args: ['-c', 'pyproject.toml']
         additional_dependencies: ['bandit[toml]']
-        files: ^(src/check_provider_config\.py|src/check_module_versions\.py|src/check_tfsort\.py|test/test_hook\.py)$
+        files: ^src/.*\.py$
 
   # Security: Safety - checks dependencies for known vulnerabilities
   - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
@@ -85,7 +85,7 @@ repos:
     hooks:
       - id: vulture
         args: [--min-confidence, '80', 'src/check_provider_config.py', 'src/check_module_versions.py', 'src/check_tfsort.py', 'test/test_hooks.py']
-        files: ^(src/check_provider_config\.py|src/check_module_versions\.py|src/check_tfsort\.py|test/test_hook\.py)$
+        files: ^src/.*\.py$
         # No additional dependencies needed - we only use stdlib
 
   # Security: detect-secrets - prevents committing secrets

@@ -14,10 +14,10 @@ authors = [
     {name = "Thomas M Atwood"}
 ]
 keywords = ["terraform", "opentofu", "pre-commit", "provider", "linter"]
+license = {text = "MIT"}
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -43,8 +43,8 @@ check-provider-config = "src.check_provider_config:main"
 
 # Bandit security configuration
 [tool.bandit]
-targets = ["src/check_provider_config.py", "test/test_hook.py"]
-exclude_dirs = ["/test/", "/.venv/", "/venv/"]
+targets = ["src/"]
+exclude_dirs = ["test", ".venv", "venv"]
 skips = []  # Add specific test IDs to skip if needed
 
 # Bandit severity levels
