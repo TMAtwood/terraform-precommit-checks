@@ -1,0 +1,39 @@
+# top-most EditorConfig file
+root = true
+
+# === Universal Settings ===
+# Apply to all files unless overridden by a later, more specific section
+[*]
+# Set default charset
+charset = utf-8
+# Use Unix-style (LF) line endings
+end_of_line = lf
+# Ensure file ends with a single newline character
+insert_final_newline = true
+# Remove any trailing whitespace on lines
+trim_trailing_whitespace = true
+
+# === Python Specific Settings ===
+# Matches all Python files (*.py)
+[*.py]
+# Python uses 4-space indentation
+indent_size = 4
+indent_style = space
+# Some linters prefer a max line length of 88 or 120, but 120 is a common default
+max_line_length = 120
+
+# === Terraform Specific Settings ===
+# Matches all Terraform files (*.tf, *.tfvars)
+# The file format for Terraform (HCL) is strongly opinionated and uses its own formatter (`terraform fmt`).
+# The common convention is 2 spaces, but `terraform fmt` handles the canonical formatting.
+[*.tf]
+indent_size = 2
+indent_style = space
+# Note: For Terraform, it is often recommended to use the official tool
+# `terraform fmt` to enforce the canonical style, as it is non-configurable
+# and ensures uniformity. The EditorConfig rules mostly act as a fallback
+# for editors/IDEs before `terraform fmt` is run.
+
+[*.tfvars]
+indent_size = 2
+indent_style = space

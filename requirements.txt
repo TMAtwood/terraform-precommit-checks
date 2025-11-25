@@ -1,0 +1,19 @@
+# Python dependencies for Terraform Provider Convention Checker
+
+# Pre-commit framework for running hooks
+# Pre-commit manages its own isolated environments for hooks
+pre-commit>=4.5.0
+
+# Testing framework and coverage (for local development)
+# Optional: only needed if running tests locally with pytest
+pytest>=9.0.1
+pytest-cov>=7.0.0
+
+# Note: The check_provider_config.py script itself has NO external dependencies
+# and only uses Python standard library modules:
+# - argparse (command-line argument parsing)
+# - re (regular expressions)
+# - sys (system functions)
+# - pathlib (file path handling)
+# - typing (type hints)
+# - subprocess (used in test suite)

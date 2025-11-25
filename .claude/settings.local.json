@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(python:*)",
+      "Bash(bash verify_multi_cloud.sh:*)",
+      "Bash(chmod:*)",
+      "Bash(bash:*)",
+      "Bash(cat:*)",
+      "Bash(pre-commit validate-config:*)",
+      "Bash(detect-secrets scan:*)",
+      "Bash(pre-commit run:*)",
+      "Bash(git add:*)",
+      "Bash(/dev/null)",
+      "Bash(echo:*)",
+      "Bash(shellcheck:*)",
+      "Bash(git mv:*)",
+      "Bash(git rm:*)",
+      "Bash(pytest:*)",
+      "Bash(pip install:*)"
+    ],
+    "ask": [],
+    "deny": []
+  }
+}

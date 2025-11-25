@@ -1,0 +1,203 @@
+# Pre-commit configuration for Terraform/OpenTofu Provider Convention Checker
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0  # Use the latest version or pin as needed
+    hooks:
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-illegal-windows-names
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-vcs-permalinks
+      - id: check-xml
+      - id: check-yaml
+      - id: debug-statements
+      - id: destroyed-symlinks
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: file-contents-sorter
+      - id: fix-byte-order-marker
+      - id: forbid-new-submodules
+      - id: forbid-submodules
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: name-tests-test
+      - id: no-commit-to-branch
+        args: [--branch, develop, --branch, main, --branch, master]
+      - id: pretty-format-json
+      - id: requirements-txt-fixer
+      - id: sort-simple-yaml
+      - id: trailing-whitespace
+
+  # Python formatting and linting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.5
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  # Python type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.18.2
+    hooks:
+      - id: mypy
+        files: ^(check_provider_config\.py|check_module_versions\.py|check_tfsort\.py|test/test_hook\.py)$
+        # No additional dependencies needed - we only use stdlib
+
+  # Security: Bandit - finds common security issues
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.1
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+        files: ^(check_provider_config\.py|check_module_versions\.py|check_tfsort\.py|test/test_hook\.py)$
+
+  # Security: Safety - checks dependencies for known vulnerabilities
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.4.2
+    hooks:
+      - id: python-safety-dependencies-check
+        files: requirements.*\.txt$
+
+  # Security: pip-audit - audit Python packages for known vulnerabilities
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.9.0
+    hooks:
+      - id: pip-audit
+        args: ["-r", "requirements.txt"]
+
+  # Code quality: Vulture - finds unused code
+  - repo: https://github.com/jendrikseipp/vulture
+    rev: v2.14
+    hooks:
+      - id: vulture
+        args: [--min-confidence, '80', 'check_provider_config.py', 'check_module_versions.py', 'check_tfsort.py', 'test/test_hooks.py']
+        files: ^(check_provider_config\.py|check_module_versions\.py|check_tfsort\.py|test/test_hook\.py)$
+        # No additional dependencies needed - we only use stdlib
+
+  # Security: detect-secrets - prevents committing secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package-lock.json
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        args: ['-x']  # Follow source statements
+        files: \.(sh|bash)$
+
+  # Local hooks for this project
+  - repo: local
+    hooks:
+      - id: check-provider-config
+        name: Check for old-style provider configurations
+        entry: python check_provider_config.py
+        language: python
+        files: \.tf$
+        exclude: ^(test/.*old.*\.tf|examples/example_multi_cloud_root\.tf)$
+        pass_filenames: true
+        description: |
+          Detects old-style provider configurations that prevent module-level
+          for_each and depends_on in Terraform/OpenTofu modules.
+        # No additional_dependencies needed - uses stdlib only
+
+      - id: check-tofu-unit-tests
+        name: Run Terraform/OpenTofu unit tests
+        entry: python check_tofu_unit_tests.py
+        language: python
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
+        description: |
+          Runs Terraform/OpenTofu (TOFU) unit tests to ensure they pass.
+          Use --test-dir to specify a custom test directory.
+          Use --command=tofu or --command=terraform to explicitly choose which tool to use.
+          By default, tries tofu first, then falls back to terraform.
+        # No additional_dependencies needed - uses stdlib only
+
+      - id: check-tofu-integration-tests
+        name: Run Terraform/OpenTofu integration tests
+        entry: python check_tofu_integration_tests.py
+        language: python
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
+        description: |
+          Runs Terraform/OpenTofu (TOFU) integration tests to ensure they pass.
+          Use --test-dir to specify a custom integration test directory.
+          Use --command=tofu or --command=terraform to explicitly choose which tool to use.
+          By default, tries tofu first, then falls back to terraform.
+        # No additional_dependencies needed - uses stdlib only
+
+      - id: check-module-versions
+        name: Check for conflicting module versions
+        entry: python check_module_versions.py
+        language: python
+        files: \.tf$
+        exclude: ^test/test_module_conflicts\.tf$
+        pass_filenames: true
+        args: [--exclude-dir, test/]
+        description: |
+          Detects conflicting module versions or git refs in Terraform/OpenTofu.
+          Ensures all references to the same module use consistent versions.
+        # No additional_dependencies needed - uses stdlib only
+
+      - id: check-tfsort
+        name: Check if files are sorted per tfsort conventions
+        entry: python check_tfsort.py
+        language: python
+        files: (variables|outputs)\.tf$
+        exclude: ^test/
+        pass_filenames: true
+        description: |
+          Verifies that variable and output blocks in .tf files are sorted
+          alphabetically as per tfsort conventions. Checks outputs.tf and
+          variables.tf files to ensure proper sorting.
+        # No additional_dependencies needed - uses stdlib only
+
+      - id: pytest
+        name: Run pytest tests
+        entry: python -m pytest
+        language: python
+        additional_dependencies: ['pytest>=9.0.0']
+        args: [test/, -v]
+        pass_filenames: false
+        always_run: true
+
+      - id: pytest-coverage
+        name: Run pytest with coverage
+        entry: python -m pytest
+        language: python
+        additional_dependencies: ['pytest>=9.0.0', 'pytest-cov>=6.0.0']
+        args:
+          - test/
+          - --cov=.
+          - --cov-report=term-missing
+          - --cov-report=html
+          - --cov-fail-under=70
+        pass_filenames: false
+        always_run: true
+
+# Configuration
+default_language_version:
+  python: python3
+
+default_stages: [pre-commit]

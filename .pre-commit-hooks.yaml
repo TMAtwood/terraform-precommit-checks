@@ -1,0 +1,63 @@
+- id: check-provider-config
+  name: Check for old-style provider configurations
+  description: |
+    Detects old-style provider configurations that prevent module-level
+    for_each and depends_on in Terraform/OpenTofu modules.
+  entry: check_provider_config.py
+  language: python
+  files: \.tf$
+  pass_filenames: true
+  minimum_pre_commit_version: '4.0.0'
+
+- id: check-module-versions
+  name: Check for conflicting module versions
+  description: |
+    Detects conflicting module versions or git refs in Terraform/OpenTofu.
+    Ensures all references to the same module use consistent versions across
+    all .tf files to prevent inconsistent behavior.
+  entry: check_module_versions.py
+  language: python
+  files: \.tf$
+  pass_filenames: true
+  minimum_pre_commit_version: '4.0.0'
+
+- id: check-tfsort
+  name: Check if files are sorted per tfsort conventions
+  description: |
+    Verifies that variable and output blocks in .tf files are sorted
+    alphabetically as per tfsort conventions. Checks outputs.tf and
+    variables.tf files to ensure proper sorting and maintainability.
+  entry: check_tfsort.py
+  language: python
+  files: (variables|outputs)\.tf$
+  exclude: ^test/
+  pass_filenames: true
+  minimum_pre_commit_version: '4.0.0'
+
+- id: check-tofu-unit-tests
+  name: Run Terraform/OpenTofu unit tests
+  description: |
+    Runs Terraform/OpenTofu (TOFU) unit tests to ensure they pass before commit.
+    Automatically detects test directories or accepts a custom path via --test-dir.
+    Use --command=tofu or --command=terraform to explicitly choose which tool to use.
+    By default, tries tofu first, then falls back to terraform.
+  entry: check_tofu_unit_tests.py
+  language: python
+  pass_filenames: false
+  always_run: true
+  stages: [pre-push]
+  minimum_pre_commit_version: '4.0.0'
+
+- id: check-tofu-integration-tests
+  name: Run Terraform/OpenTofu integration tests
+  description: |
+    Runs Terraform/OpenTofu (TOFU) integration tests to ensure they pass before commit.
+    Automatically detects integration test directories or accepts a custom path via --test-dir.
+    Use --command=tofu or --command=terraform to explicitly choose which tool to use.
+    By default, tries tofu first, then falls back to terraform.
+  entry: check_tofu_integration_tests.py
+  language: python
+  pass_filenames: false
+  always_run: true
+  stages: [pre-push]
+  minimum_pre_commit_version: '4.0.0'
