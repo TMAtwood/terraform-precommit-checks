@@ -3,7 +3,7 @@
   description: |
     Detects old-style provider configurations that prevent module-level
     for_each and depends_on in Terraform/OpenTofu modules.
-  entry: src/check_provider_config.py
+  entry: check-provider-config
   language: python
   files: \.tf$
   pass_filenames: true
@@ -15,7 +15,7 @@
     Detects conflicting module versions or git refs in Terraform/OpenTofu.
     Ensures all references to the same module use consistent versions across
     all .tf files to prevent inconsistent behavior.
-  entry: src/check_module_versions.py
+  entry: check-module-versions
   language: python
   files: \.tf$
   pass_filenames: true
@@ -27,7 +27,7 @@
     Verifies that variable and output blocks in .tf files are sorted
     alphabetically as per tfsort conventions. Checks outputs.tf and
     variables.tf files to ensure proper sorting and maintainability.
-  entry: src/check_tfsort.py
+  entry: check-tfsort
   language: python
   files: (variables|outputs)\.tf$
   exclude: ^test/
@@ -41,7 +41,7 @@
     Automatically detects test directories or accepts a custom path via --test-dir.
     Use --command=tofu or --command=terraform to explicitly choose which tool to use.
     By default, tries tofu first, then falls back to terraform.
-  entry: src/check_tofu_unit_tests.py
+  entry: check-tofu-unit-tests
   language: python
   pass_filenames: false
   always_run: true
@@ -55,7 +55,7 @@
     Automatically detects integration test directories or accepts a custom path via --test-dir.
     Use --command=tofu or --command=terraform to explicitly choose which tool to use.
     By default, tries tofu first, then falls back to terraform.
-  entry: src/check_tofu_integration_tests.py
+  entry: check-tofu-integration-tests
   language: python
   pass_filenames: false
   always_run: true
