@@ -140,7 +140,6 @@ repos:
         language: python
         pass_filenames: false
         always_run: true
-        stages: [manual]
         description: |
           Runs Terraform/OpenTofu (TOFU) integration tests to ensure they pass.
           Use --test-dir to specify a custom integration test directory.
