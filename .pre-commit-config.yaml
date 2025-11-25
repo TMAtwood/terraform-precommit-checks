@@ -192,23 +192,24 @@ repos:
 
       - id: pytest
         name: Run all test suites
-        entry: bash run_tests.sh
-        language: system
+        entry: python -m pytest test/test_provider_config.py test/test_module_versions.py test/test_tfsort.py test/test_tofu_unit_tests.py test/test_tofu_integration_tests.py test/test_check_terraform_tags_unit.py -v
+        language: python
         pass_filenames: false
         always_run: true
         description: |
-          Runs all test suites including legacy integration tests and pytest unit tests.
-          Uses system bash to avoid Python 3.13 / pytest 9.0 capture plugin I/O issues.
+          Runs all pytest unit test suites.
+        additional_dependencies: ['pytest>=9.0.0']
 
       - id: pytest-coverage
         name: Run pytest with coverage
-        entry: bash run_tests.sh
-        language: system
+        entry: python -m pytest test/test_provider_config.py test/test_module_versions.py test/test_tfsort.py test/test_tofu_unit_tests.py test/test_tofu_integration_tests.py test/test_check_terraform_tags_unit.py --cov=src.check_provider_config --cov=src.check_module_versions --cov=src.check_tfsort --cov=src.check_tofu_unit_tests --cov=src.check_tofu_integration_tests --cov=check_terraform_tags --cov-report=term --cov-report=html --cov-fail-under=80
+        language: python
         pass_filenames: false
         always_run: true
         description: |
-          Runs all test suites with coverage reporting.
-          Uses system bash to avoid Python 3.13 / pytest 9.0 capture plugin I/O issues.
+          Runs all test suites with coverage reporting and enforces minimum 80% coverage.
+          Use with: pre-commit run --all-files --hook-stage manual pytest-coverage
+        additional_dependencies: ['pytest>=9.0.0', 'pytest-cov>=7.0.0']
 
 # Configuration
 default_language_version:
