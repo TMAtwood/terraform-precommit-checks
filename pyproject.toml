@@ -6,9 +6,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "terraform-precommit-checks"
+version = "0.1.0"
 description = "A collection of OpenTofu/Terraform pre-commit checks designed to standardize patterns, catch issues early, and keep your Terraform modules easy to maintain."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.8"
 authors = [
     {name = "Thomas M Atwood"}
 ]
@@ -18,12 +19,16 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Quality Assurance",
 ]
+dependencies = []
 
 # Optional dependencies
 [project.optional-dependencies]
@@ -41,6 +46,20 @@ check-tfsort = "check_tfsort:main"
 check-tofu-unit-tests = "check_tofu_unit_tests:main"
 check-tofu-integration-tests = "check_tofu_integration_tests:main"
 check-terraform-tags = "check_terraform_tags:main"
+
+# Setuptools configuration
+[tool.setuptools]
+py-modules = [
+    "check_provider_config",
+    "check_module_versions",
+    "check_tfsort",
+    "check_tofu_unit_tests",
+    "check_tofu_integration_tests",
+    "check_terraform_tags",
+]
+
+[tool.setuptools.package-dir]
+"" = "src"
 
 # Bandit security configuration
 [tool.bandit]
