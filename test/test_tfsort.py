@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from check_tfsort import BlockInfo, TFSortChecker, main
+from src.check_tfsort import BlockInfo, TFSortChecker, main
 
 # Add parent directory to path to import the module
 sys.path.insert(0, str(Path(__file__).parent.parent))

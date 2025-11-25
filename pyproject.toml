@@ -39,11 +39,11 @@ dev = [
 ]
 
 [project.scripts]
-check-provider-config = "check_provider_config:main"
+check-provider-config = "src.check_provider_config:main"
 
 # Bandit security configuration
 [tool.bandit]
-targets = ["check_provider_config.py", "test/test_hook.py"]
+targets = ["src/check_provider_config.py", "test/test_hook.py"]
 exclude_dirs = ["/test/", "/.venv/", "/venv/"]
 skips = []  # Add specific test IDs to skip if needed
 

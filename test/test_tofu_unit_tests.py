@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from check_tofu_unit_tests import find_test_directory, main, run_tofu_test
+from src.check_tofu_unit_tests import find_test_directory, main, run_tofu_test
 
 # Add parent directory to path to import the module
 sys.path.insert(0, str(Path(__file__).parent.parent))

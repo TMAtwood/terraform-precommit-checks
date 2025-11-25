@@ -11,7 +11,7 @@ from unittest.mock import patch
 # Add parent directory to path to import the module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from check_provider_config import ProviderConfigChecker, main
+from src.check_provider_config import ProviderConfigChecker, main
 
 
 class TestProviderConfigChecker:

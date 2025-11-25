@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from check_tofu_integration_tests import (
+from src.check_tofu_integration_tests import (
     find_integration_test_directory,
     main,
     run_tofu_integration_test,
