@@ -1,32 +1,84 @@
-# 🚀 START HERE
+# START HERE - Terraform/OpenTofu Pre-Commit Hooks
 
-## Terraform/OpenTofu Provider Configuration Pre-Commit Hook
+## What You Have
 
-**✅ All files are present and ready to use!**
+This repository provides **6 comprehensive pre-commit hooks** for Terraform/OpenTofu that work with **any cloud provider**:
 
-### 📦 What You Have
+| Hook | Purpose | Stage |
+|------|---------|-------|
+| **check-provider-config** | Enforces modern provider patterns | Automatic |
+| **check-module-versions** | Ensures version consistency | Automatic |
+| **check-tfsort** | Validates alphabetical sorting | Automatic |
+| **check-terraform-tags** | Enforces tagging standards | Automatic |
+| **check-tofu-unit-tests** | Runs unit tests | Manual |
+| **check-tofu-integration-tests** | Runs integration tests | Manual |
 
-This package contains a **provider-agnostic** pre-commit hook that works with:
-- ✅ **AWS** (amazon web services)
-- ✅ **Azure** (microsoft azure)
-- ✅ **GCP** (google cloud platform)
-- ✅ **Oracle Cloud** (oci)
-- ✅ **ANY** Terraform provider (3,000+ in the registry)
+## Quick Start (5 Minutes)
 
-### 🎯 What It Does
+### Step 1: Add to Your Repository
 
-Prevents old-style provider configurations that block `for_each` and `depends_on` at the module level.
+Add to your `.pre-commit-config.yaml`:
 
-**Before (❌ Blocked):**
-```hcl
-provider "aws" {  # or azurerm, google, oci, etc.
-  region = var.region
-}
-# Can't use for_each or depends_on on modules!
+```yaml
+repos:
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
+    rev: v1.0.0  # Use the latest version
+    hooks:
+      # Automatic hooks (run on commit)
+      - id: check-provider-config
+      - id: check-module-versions
+      - id: check-tfsort
+      - id: check-terraform-tags
+        args: [--config, .terraform-tags.yaml]
+
+      # Manual hooks (run separately)
+      # - id: check-tofu-unit-tests
+      # - id: check-tofu-integration-tests
 ```
 
-**After (✅ Enabled):**
+### Step 2: Install Hooks
+
+```bash
+# Install pre-commit (if not already installed)
+pip install pre-commit
+
+# Install the hooks
+pre-commit install
+```
+
+### Step 3: Test the Hooks
+
+```bash
+# Run all automatic hooks
+pre-commit run --all-files
+
+# Run specific hooks
+pre-commit run check-provider-config --all-files
+pre-commit run check-terraform-tags --all-files
+
+# Run manual test hooks
+pre-commit run check-tofu-unit-tests --hook-stage manual
+```
+
+## What Each Hook Does
+
+### 1. Provider Configuration Checker
+
+**Prevents:** Old-style `provider "name" { }` blocks that break `for_each` and `depends_on`
+
+**Example issue detected:**
+
 ```hcl
+# ❌ FAILS - Old pattern
+provider "aws" {
+  region = var.region
+}
+```
+
+**Fix:**
+
+```hcl
+# ✅ PASSES - New pattern
 terraform {
   required_providers {
     aws = {
@@ -36,191 +88,272 @@ terraform {
     }
   }
 }
-# Now for_each and depends_on work on modules!
 ```
 
-### 📚 Quick Navigation
+**Learn more:** [PROVIDER_CONFIG_PATTERNS.md](PROVIDER_CONFIG_PATTERNS.md)
+
+### 2. Module Version Checker
+
+**Prevents:** Conflicting module versions across your codebase
+
+**Example issue detected:**
+
+```hcl
+# ❌ FAILS - Conflicting versions
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "3.0.0"  # One file uses 3.0.0
+}
+
+# In another file...
+module "vpc_prod" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "3.1.0"  # Another uses 3.1.0 - CONFLICT!
+}
+```
+
+**Why it matters:** Prevents drift, ensures reproducible deployments
+
+### 3. TFSort Checker
+
+**Validates:** Variables and outputs are sorted alphabetically
+
+**Example issue detected:**
+
+```hcl
+# ❌ FAILS - Wrong order
+variable "region" {}
+variable "environment" {}  # Should come before "region"
+```
+
+**Fix:**
+
+```hcl
+# ✅ PASSES - Alphabetical order
+variable "environment" {}
+variable "region" {}
+```
+
+**Why it matters:** Reduces merge conflicts, improves readability
+
+### 4. Tag Validation
+
+**Enforces:** Resource tagging standards with case sensitivity and value validation
+
+**Example issue detected:**
+
+```hcl
+# ❌ FAILS - Missing required tags, wrong case
+resource "aws_instance" "web" {
+  ami           = "ami-12345"
+  instance_type = "t2.micro"
+
+  tags = {
+    environment = "Production"  # Wrong case (should be "Environment")
+    # Missing: Owner, CostCenter
+  }
+}
+```
+
+**Fix:**
+
+```hcl
+# ✅ PASSES - All required tags with correct case
+resource "aws_instance" "web" {
+  ami           = "ami-12345"
+  instance_type = "t2.micro"
+
+  tags = {
+    Environment = "Production"        # Correct case
+    Owner       = "team@example.com"  # Required tag
+    CostCenter  = "CC-1234"           # Required tag
+  }
+}
+```
+
+**Configuration:** Create `.terraform-tags.yaml`:
+
+```yaml
+required_tags:
+  - name: Environment
+    allowed_values:
+      - Development
+      - Staging
+      - Production
+
+  - name: Owner
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  - name: CostCenter
+    pattern: "^CC-[0-9]{4}$"
+
+optional_tags:
+  - name: Project
+  - name: Description
+```
+
+**Learn more:** [TAG_VALIDATION.md](TAG_VALIDATION.md)
+
+### 5. Unit Test Runner
+
+**Runs:** Terraform/OpenTofu unit tests automatically
+
+**Usage:**
+
+```bash
+pre-commit run check-tofu-unit-tests --hook-stage manual
+```
+
+**Auto-detects test directories:** `tests/`, `test/`, `*_test/`
+
+### 6. Integration Test Runner
+
+**Runs:** Terraform/OpenTofu integration tests
+
+**Usage:**
+
+```bash
+pre-commit run check-tofu-integration-tests --hook-stage manual
+```
+
+**Auto-detects:** `integration_tests/`, `integration/`, `tests/integration/`
+
+## Provider Support
+
+All hooks work with **any Terraform provider**:
+
+- ✅ AWS, Azure, Google Cloud, Oracle Cloud
+- ✅ VMware, Kubernetes, Helm, Docker
+- ✅ Datadog, PagerDuty, Cloudflare, Vault
+- ✅ 3,000+ providers in the Terraform Registry
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Terraform Validation
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pre-commit
+      - name: Run hooks
+        run: pre-commit run --all-files
+```
+
+### GitLab CI
+
+```yaml
+terraform-validation:
+  stage: validate
+  image: python:3.11
+  script:
+    - pip install pre-commit
+    - pre-commit run --all-files
+```
+
+### Azure DevOps
+
+```yaml
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.11'
+- script: |
+    pip install pre-commit
+    pre-commit run --all-files
+  displayName: 'Validate Terraform'
+```
+
+## What Gets Checked
+
+When you run `git commit`, these hooks automatically check:
+
+1. ✅ Provider configurations use modern patterns
+2. ✅ Module versions are consistent across files
+3. ✅ Variables and outputs are alphabetically sorted
+4. ✅ All taggable resources have required tags with correct case
+
+**Manual test hooks** run separately when you invoke them.
+
+## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| **[INDEX.md](INDEX.md)** | Overview and quick reference |
-| **[README.md](README.md)** | Complete installation guide |
-| **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | Pattern comparison |
-| **[MULTI_CLOUD_SUPPORT.md](MULTI_CLOUD_SUPPORT.md)** | Multi-cloud examples |
-| **[FILES_MANIFEST.txt](FILES_MANIFEST.txt)** | Complete file listing |
+| [INDEX.md](INDEX.md) | Complete overview of all 6 hooks |
+| [PROVIDER_CONFIG_PATTERNS.md](PROVIDER_CONFIG_PATTERNS.md) | Provider configuration examples |
+| [PROVIDER_CONFIG_MULTI_CLOUD.md](PROVIDER_CONFIG_MULTI_CLOUD.md) | Multi-cloud patterns |
+| [TAG_VALIDATION.md](TAG_VALIDATION.md) | Complete tagging guide |
+| [README.md](../README.md) | Main repository documentation |
 
-### ⚡ Quick Start (2 minutes)
+## Benefits
 
-#### Option 1: Automated Setup
-```bash
-# Make setup script executable
-chmod +x setup.sh
+| What You Get | How It Helps |
+|--------------|--------------|
+| **Consistency** | Enforces standards across your team |
+| **Quality** | Catches issues before they reach production |
+| **Compliance** | Ensures tagging for cost tracking and governance |
+| **Best Practices** | Modern provider patterns enable powerful features |
+| **CI/CD Ready** | Integrates seamlessly with pipelines |
+| **Multi-Cloud** | Works with any provider, any cloud |
 
-# Run setup
-./setup.sh
-```
+## Next Steps
 
-#### Option 2: Manual Setup
-```bash
-# Install pre-commit
-pip install pre-commit
+1. **Install:** Add hooks to your `.pre-commit-config.yaml` (see Step 1 above)
+2. **Configure:** Create `.terraform-tags.yaml` for tag validation
+3. **Test:** Run `pre-commit run --all-files`
+4. **Commit:** Hooks now run automatically on every commit!
+5. **Learn More:** Read [INDEX.md](INDEX.md) for complete documentation
 
-# Copy the hook to your repo
-cp check_provider_config.py /path/to/your/repo/
-cp pre-commit-config.yaml /path/to/your/repo/.pre-commit-config.yaml
+## Common Use Cases
 
-# Install
-cd /path/to/your/repo
-pre-commit install
+### Platform Engineering Team
 
-# Test
-pre-commit run check-provider-config --all-files
-```
+Enforce standards across multiple teams and projects:
 
-### ✅ Verify It Works
+- ✅ Modern provider patterns for module reusability
+- ✅ Consistent tagging for cost allocation
+- ✅ Sorted code for reduced merge conflicts
+- ✅ Version consistency for predictable deployments
 
-Test with multiple cloud providers:
-```bash
-chmod +x verify_multi_cloud.sh
-./verify_multi_cloud.sh
-```
+### Multi-Cloud Infrastructure
 
-This will demonstrate detection working for AWS, Azure, GCP, and Oracle Cloud.
+Manage AWS, Azure, and GCP with consistent patterns:
 
-### 📁 Files Included (21 total)
+- ✅ Same validation rules across all providers
+- ✅ Unified tagging standards (works with AWS tags, GCP labels, etc.)
+- ✅ Provider-agnostic module patterns
 
-#### Core (Required)
-- `check_provider_config.py` - The pre-commit hook
-- `pre-commit-config.yaml` - Configuration file
-- `setup.sh` - Automated installer
+### Compliance & Governance
 
-#### Documentation (5 files)
-- `INDEX.md` - Overview
-- `README.md` - Complete guide
-- `QUICK_REFERENCE.md` - Quick patterns
-- `MULTI_CLOUD_SUPPORT.md` - Multi-cloud guide
-- `PACKAGE_SUMMARY.md` - Package details
-- `FILES_MANIFEST.txt` - File listing
+Meet organizational requirements:
 
-#### Testing (2 files)
-- `verify_multi_cloud.sh` - Multi-provider verification
-- `test_hook.py` - Automated test suite
+- ✅ Required tags for compliance (Owner, Environment, CostCenter)
+- ✅ Pattern validation for formats (email, ticket IDs)
+- ✅ Case-sensitive validation for consistency
+- ✅ Automated enforcement in CI/CD
 
-#### Examples - Old Pattern (4 files)
-- `test_old_style.tf` - AWS (fails check)
-- `test_azure_old.tf` - Azure (fails check)
-- `test_gcp_old.tf` - GCP (fails check)
-- `test_oci_old.tf` - Oracle (fails check)
+## Getting Help
 
-#### Examples - New Pattern (5 files)
-- `test_new_style.tf` - Simple correct example
-- `example_multi_provider.tf` - Multi-provider module
-- `example_root_module.tf` - Root with for_each/depends_on
-- `example_multi_cloud_module.tf` - AWS+Azure+GCP+Oracle module
-- `example_multi_cloud_root.tf` - Multi-cloud root module
-
-### 🧪 Test It Now
-
-```bash
-# Test AWS detection
-python check_provider_config.py test_old_style.tf
-
-# Test Azure detection
-python check_provider_config.py test_azure_old.tf
-
-# Test GCP detection
-python check_provider_config.py test_gcp_old.tf
-
-# Test Oracle Cloud detection
-python check_provider_config.py test_oci_old.tf
-
-# Test correct pattern (should pass)
-python check_provider_config.py test_new_style.tf
-
-# Test all at once
-chmod +x verify_multi_cloud.sh
-./verify_multi_cloud.sh
-```
-
-### 💡 Why This Matters
-
-Enables powerful module patterns that were previously blocked:
-
-```hcl
-# Deploy to multiple environments dynamically
-module "app" {
-  source   = "./modules/app"
-  for_each = var.environments  # ✅ Now works!
-
-  providers = {
-    aws.main = aws.primary
-  }
-}
-
-# Control module execution order
-module "workers" {
-  source     = "./modules/workers"
-  depends_on = [module.app]  # ✅ Now works!
-
-  providers = {
-    aws.main = aws.primary
-  }
-}
-```
-
-### 🏢 Perfect For Your Use Case
-
-Since you work with:
-- ✅ **Azure** - Fully supported
-- ✅ **AWS** - Fully supported
-- ✅ **Platform Engineering** - Enforces best practices
-- ✅ **OpenTofu** - Works with both Terraform and OpenTofu
-
-### 🔧 Integration
-
-**Git (Automatic):**
-```bash
-git commit  # Hook runs automatically
-```
-
-**CI/CD:**
-```bash
-pre-commit run check-provider-config --all-files
-```
-
-**Manual:**
-```bash
-python check_provider_config.py **/*.tf
-```
-
-### ❓ Need Help?
-
-1. Check **[README.md](README.md)** for detailed instructions
-2. See **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** for pattern examples
-3. Review **[MULTI_CLOUD_SUPPORT.md](MULTI_CLOUD_SUPPORT.md)** for multi-cloud patterns
-
-### 📊 File Verification
-
-All 21 files are present:
-- ✅ 3 core files (Python, config, setup)
-- ✅ 6 documentation files
-- ✅ 2 testing/verification scripts
-- ✅ 4 old-pattern examples (AWS, Azure, GCP, Oracle)
-- ✅ 5 new-pattern examples
-- ✅ 1 start guide (this file)
-
-### 🎉 Next Steps
-
-1. **Read** - Review [README.md](README.md) or [INDEX.md](INDEX.md)
-2. **Install** - Run `./setup.sh` or follow manual steps above
-3. **Verify** - Run `./verify_multi_cloud.sh`
-4. **Use** - Commit changes and let the hook protect your code!
+1. Review [INDEX.md](INDEX.md) for detailed documentation
+2. Check [TAG_VALIDATION.md](TAG_VALIDATION.md) for tagging examples
+3. See `test/` directory for working examples
+4. Open an issue on GitHub for support
 
 ---
 
-**Ready to get started? Run:**
+**Ready? Run:**
+
 ```bash
-./setup.sh && ./verify_multi_cloud.sh
+pre-commit run --all-files
 ```
 
-This will install the hook and prove it works with multiple cloud providers!
+This will validate your entire Terraform codebase!

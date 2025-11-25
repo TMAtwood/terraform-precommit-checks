@@ -409,10 +409,7 @@ class TerraformTagChecker:
 
         resource_content = content[resource_start:resource_end]
 
-        # Look for tags/labels block or inline assignment
-        # Pattern 1: tags = { ... }
-        tags_block_pattern = re.compile(rf"{tag_attr}\s*=\s*\{{([^}}]*)\}}", re.DOTALL)
-        # Pattern 2: tags = merge(...) or similar - we can't validate these
+        # Pattern for dynamic tags: tags = merge(...) or similar - we can't validate these
         tags_dynamic_pattern = re.compile(rf"{tag_attr}\s*=\s*(merge|var\.|local\.)")
 
         # Check for dynamic tags first
@@ -420,15 +417,32 @@ class TerraformTagChecker:
             # Can't validate dynamic tags
             return None, None
 
-        # Look for static tags block
-        tags_match = tags_block_pattern.search(resource_content)
-        if not tags_match:
+        # Find tags/labels block start
+        tags_start_pattern = re.compile(rf"{tag_attr}\s*=\s*\{{")
+        tags_start_match = tags_start_pattern.search(resource_content)
+
+        if not tags_start_match:
             # No tags found
             tag_line = content[:resource_start].count("\n") + 1
             return {}, tag_line
 
-        tags_content = tags_match.group(1)
-        tag_line = content[: resource_start + tags_match.start()].count("\n") + 1
+        # Find the matching closing brace using brace counting
+        tags_block_start = tags_start_match.end() - 1  # Position of opening {
+        brace_count = 0
+        tags_block_end = tags_block_start
+
+        for i, char in enumerate(resource_content[tags_block_start:], start=tags_block_start):
+            if char == "{":
+                brace_count += 1
+            elif char == "}":
+                brace_count -= 1
+                if brace_count == 0:
+                    tags_block_end = i
+                    break
+
+        # Extract content between braces
+        tags_content = resource_content[tags_block_start + 1 : tags_block_end]
+        tag_line = content[: resource_start + tags_start_match.start()].count("\n") + 1
 
         # Parse tag key-value pairs
         # Pattern: "key" = "value" or key = "value"
@@ -453,6 +467,7 @@ class TerraformTagChecker:
         for required_tag in self.required_tags:
             tag_name = required_tag["name"]
             allowed_values = required_tag.get("allowed_values")
+            pattern = required_tag.get("pattern")
 
             # Check if tag exists (case-sensitive)
             if tag_name not in tags:
@@ -489,26 +504,52 @@ class TerraformTagChecker:
                 continue
 
             # Check allowed values if specified
-            if allowed_values and tag_value not in allowed_values:
-                # Check for case mismatch
-                value_lower = tag_value.lower()
-                found_mismatch = None
-                for allowed_value in allowed_values:
-                    if allowed_value.lower() == value_lower:
-                        found_mismatch = allowed_value
-                        break
+            if allowed_values:
+                if tag_value not in allowed_values:
+                    # Check for case mismatch
+                    value_lower = tag_value.lower()
+                    found_mismatch = None
+                    for allowed_value in allowed_values:
+                        if allowed_value.lower() == value_lower:
+                            found_mismatch = allowed_value
+                            break
 
-                if found_mismatch:
-                    error_msg = (
-                        f"Tag '{tag_name}' value '{tag_value}' has incorrect case. "
-                        f"Expected '{found_mismatch}' (allowed: {allowed_values})."
-                    )
-                else:
-                    error_msg = (
-                        f"Tag '{tag_name}' has invalid value '{tag_value}'. "
-                        f"Allowed values: {allowed_values}."
-                    )
+                    if found_mismatch:
+                        error_msg = (
+                            f"Tag '{tag_name}' value '{tag_value}' has incorrect case. "
+                            f"Expected '{found_mismatch}' (allowed: {allowed_values})."
+                        )
+                    else:
+                        error_msg = (
+                            f"Tag '{tag_name}' has invalid value '{tag_value}'. "
+                            f"Allowed values: {allowed_values}."
+                        )
 
+                    self.errors.append(
+                        (
+                            file_path,
+                            line_num,
+                            f"{resource_type}.{resource_name}",
+                            error_msg,
+                        )
+                    )
+            # Check pattern if specified (and no allowed_values)
+            elif pattern:
+                try:
+                    pattern_regex = re.compile(pattern)
+                    if not pattern_regex.match(tag_value):
+                        pattern_str = f"Tag '{tag_name}' value '{tag_value}' does not match"
+                        error_msg = f"{pattern_str} required pattern '{pattern}'."
+                        self.errors.append(
+                            (
+                                file_path,
+                                line_num,
+                                f"{resource_type}.{resource_name}",
+                                error_msg,
+                            )
+                        )
+                except re.error as e:
+                    error_msg = f"Tag '{tag_name}' has invalid regex pattern '{pattern}': {e}"
                     self.errors.append(
                         (
                             file_path,
@@ -647,8 +688,12 @@ class TerraformTagChecker:
             for tag in self.required_tags:
                 tag_name = tag["name"]
                 allowed_values = tag.get("allowed_values")
+                pattern = tag.get("pattern")
+
                 if allowed_values:
                     print(f"  • {tag_name} (allowed: {allowed_values})", file=sys.stderr)
+                elif pattern:
+                    print(f"  • {tag_name} (pattern: {pattern})", file=sys.stderr)
                 else:
                     print(f"  • {tag_name} (any non-empty value)", file=sys.stderr)
 

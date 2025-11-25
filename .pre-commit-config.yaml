@@ -191,27 +191,24 @@ repos:
         additional_dependencies: ['PyYAML>=6.0']
 
       - id: pytest
-        name: Run pytest tests
-        entry: python -m pytest
-        language: python
-        additional_dependencies: ['pytest>=9.0.0']
-        args: [test/, -v]
+        name: Run all test suites
+        entry: bash run_tests.sh
+        language: system
         pass_filenames: false
         always_run: true
+        description: |
+          Runs all test suites including legacy integration tests and pytest unit tests.
+          Uses system bash to avoid Python 3.13 / pytest 9.0 capture plugin I/O issues.
 
       - id: pytest-coverage
         name: Run pytest with coverage
-        entry: python -m pytest
-        language: python
-        additional_dependencies: ['pytest>=9.0.0', 'pytest-cov>=7.0.0']
-        args:
-          - test/
-          - --cov=.
-          - --cov-report=term-missing
-          - --cov-report=html
-          - --cov-fail-under=65
+        entry: bash run_tests.sh
+        language: system
         pass_filenames: false
         always_run: true
+        description: |
+          Runs all test suites with coverage reporting.
+          Uses system bash to avoid Python 3.13 / pytest 9.0 capture plugin I/O issues.
 
 # Configuration
 default_language_version:

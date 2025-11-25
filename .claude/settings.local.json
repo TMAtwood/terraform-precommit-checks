@@ -17,7 +17,9 @@
       "Bash(git mv:*)",
       "Bash(git rm:*)",
       "Bash(pytest:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(pre-commit clean:*)",
+      "Bash(pre-commit install:*)"
     ],
     "ask": [],
     "deny": []

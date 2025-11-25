@@ -1,0 +1,26 @@
+# Test configuration for tag pattern validation
+
+required_tags:
+  # Tag with allowed values (exact match)
+  - name: Environment
+    allowed_values:
+      - Development
+      - Staging
+      - Production
+
+  # Tag with email pattern validation
+  - name: Owner
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  # Tag with cost center pattern (CC-####)
+  - name: CostCenter
+    pattern: "^CC-[0-9]{4}$"
+
+  # Tag with ticket ID pattern (PROJECT-###)
+  - name: TicketID
+    pattern: "^[A-Z]+-[0-9]+$"
+
+optional_tags:
+  - name: Project
+  - name: Description
+  - name: ManagedBy
