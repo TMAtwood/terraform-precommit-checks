@@ -39,7 +39,11 @@ dev = [
 ]
 
 [project.scripts]
-check-provider-config = "src.check_provider_config:main"
+check-provider-config = "check_provider_config:main"
+check-module-versions = "check_module_versions:main"
+check-tfsort = "check_tfsort:main"
+check-tofu-unit-tests = "check_tofu_unit_tests:main"
+check-tofu-integration-tests = "check_tofu_integration_tests:main"
 
 # Bandit security configuration
 [tool.bandit]
