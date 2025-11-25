@@ -171,7 +171,7 @@ repos:
       - id: check-terraform-tags
         name: Validate Terraform resource tags
         entry: python -m src.check_terraform_tags
-        language: system
+        language: python
         files: \.tf$
         exclude: ^test/
         pass_filenames: true
