@@ -118,7 +118,7 @@ repos:
         description: |
           Detects old-style provider configurations that prevent module-level
           for_each and depends_on in Terraform/OpenTofu modules.
-        additional_dependencies: []
+        additional_dependencies: ['.']
 
       - id: check-tofu-unit-tests
         name: Run Terraform/OpenTofu unit tests
@@ -132,7 +132,7 @@ repos:
           Use --test-dir to specify a custom test directory.
           Use --command=tofu or --command=terraform to explicitly choose which tool to use.
           By default, tries tofu first, then falls back to terraform.
-        additional_dependencies: []
+        additional_dependencies: ['.']
 
       - id: check-tofu-integration-tests
         name: Run Terraform/OpenTofu integration tests
@@ -145,7 +145,7 @@ repos:
           Use --test-dir to specify a custom integration test directory.
           Use --command=tofu or --command=terraform to explicitly choose which tool to use.
           By default, tries tofu first, then falls back to terraform.
-        additional_dependencies: []
+        additional_dependencies: ['.']
 
       - id: check-module-versions
         name: Check for conflicting module versions
@@ -158,7 +158,7 @@ repos:
         description: |
           Detects conflicting module versions or git refs in Terraform/OpenTofu.
           Ensures all references to the same module use consistent versions.
-        additional_dependencies: []
+        additional_dependencies: ['.']
 
       - id: check-tfsort
         name: Check if files are sorted per tfsort conventions
@@ -171,7 +171,7 @@ repos:
           Verifies that variable and output blocks in .tf files are sorted
           alphabetically as per tfsort conventions. Checks outputs.tf and
           variables.tf files to ensure proper sorting.
-        additional_dependencies: []
+        additional_dependencies: ['.']
 
       - id: check-terraform-tags
         name: Validate Terraform resource tags
@@ -188,7 +188,7 @@ repos:
           Validates that Terraform/OpenTofu resources have required tags with correct
           case sensitivity and allowed values. Supports AWS, Azure, GCP, Oracle Cloud,
           and all other providers.
-        additional_dependencies: ['PyYAML>=6.0']
+        additional_dependencies: ['.', 'PyYAML>=6.0']
 
       - id: pytest
         name: Run all test suites

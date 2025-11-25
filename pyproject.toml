@@ -5,9 +5,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "terraform-provider-convention-checker"
-version = "1.0.0"
-description = "Pre-commit hook to detect old-style Terraform/OpenTofu provider configurations"
+name = "terraform-precommit-checks"
+description = "A collection of OpenTofu/Terraform pre-commit checks designed to standardize patterns, catch issues early, and keep your Terraform modules easy to maintain."
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [
