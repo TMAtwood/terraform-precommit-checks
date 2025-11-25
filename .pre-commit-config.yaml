@@ -53,7 +53,7 @@ repos:
     rev: v1.18.2
     hooks:
       - id: mypy
-        files: ^(check_provider_config\.py|check_module_versions\.py|check_tfsort\.py|test/test_hook\.py)$
+        files: ^(src/check_provider_config\.py|src/check_module_versions\.py|src/check_tfsort\.py|test/test_hook\.py)$
         # No additional dependencies needed - we only use stdlib
 
   # Security: Bandit - finds common security issues
@@ -63,7 +63,7 @@ repos:
       - id: bandit
         args: ['-c', 'pyproject.toml']
         additional_dependencies: ['bandit[toml]']
-        files: ^(check_provider_config\.py|check_module_versions\.py|check_tfsort\.py|test/test_hook\.py)$
+        files: ^(src/check_provider_config\.py|src/check_module_versions\.py|src/check_tfsort\.py|test/test_hook\.py)$
 
   # Security: Safety - checks dependencies for known vulnerabilities
   - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
@@ -84,8 +84,8 @@ repos:
     rev: v2.14
     hooks:
       - id: vulture
-        args: [--min-confidence, '80', 'check_provider_config.py', 'check_module_versions.py', 'check_tfsort.py', 'test/test_hooks.py']
-        files: ^(check_provider_config\.py|check_module_versions\.py|check_tfsort\.py|test/test_hook\.py)$
+        args: [--min-confidence, '80', 'src/check_provider_config.py', 'src/check_module_versions.py', 'src/check_tfsort.py', 'test/test_hooks.py']
+        files: ^(src/check_provider_config\.py|src/check_module_versions\.py|src/check_tfsort\.py|test/test_hook\.py)$
         # No additional dependencies needed - we only use stdlib
 
   # Security: detect-secrets - prevents committing secrets
@@ -109,7 +109,7 @@ repos:
     hooks:
       - id: check-provider-config
         name: Check for old-style provider configurations
-        entry: python check_provider_config.py
+        entry: python src/check_provider_config.py
         language: python
         files: \.tf$
         exclude: ^(test/.*old.*\.tf|examples/example_multi_cloud_root\.tf)$
@@ -121,7 +121,7 @@ repos:
 
       - id: check-tofu-unit-tests
         name: Run Terraform/OpenTofu unit tests
-        entry: python check_tofu_unit_tests.py
+        entry: python src/check_tofu_unit_tests.py
         language: python
         pass_filenames: false
         always_run: true
@@ -135,7 +135,7 @@ repos:
 
       - id: check-tofu-integration-tests
         name: Run Terraform/OpenTofu integration tests
-        entry: python check_tofu_integration_tests.py
+        entry: python src/check_tofu_integration_tests.py
         language: python
         pass_filenames: false
         always_run: true
@@ -149,7 +149,7 @@ repos:
 
       - id: check-module-versions
         name: Check for conflicting module versions
-        entry: python check_module_versions.py
+        entry: python src/check_module_versions.py
         language: python
         files: \.tf$
         exclude: ^test/test_module_conflicts\.tf$
@@ -162,7 +162,7 @@ repos:
 
       - id: check-tfsort
         name: Check if files are sorted per tfsort conventions
-        entry: python check_tfsort.py
+        entry: python src/check_tfsort.py
         language: python
         files: (variables|outputs)\.tf$
         exclude: ^test/
@@ -186,7 +186,7 @@ repos:
         name: Run pytest with coverage
         entry: python -m pytest
         language: python
-        additional_dependencies: ['pytest>=9.0.0', 'pytest-cov>=6.0.0']
+        additional_dependencies: ['pytest>=9.0.0', 'pytest-cov>=7.0.0']
         args:
           - test/
           - --cov=.
