@@ -87,7 +87,7 @@ Add this repository to your `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
     rev: v0.1.0  # Use a specific version tag or branch
     hooks:
       - id: check-provider-config
@@ -437,7 +437,7 @@ Add to your `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
     rev: v0.1.0
     hooks:
       - id: check-terraform-tags
@@ -611,31 +611,81 @@ Runs Terraform/OpenTofu unit tests (`terraform test` or `tofu test`) as part of 
 
 #### Unit Test Features
 
-- **Auto-detection** - Automatically finds test directories (`tests/`, `test/`, or `*_test/`)
+- **Auto-detection** - Automatically finds test directories in standard and nested locations
+- **Nested test support** - Handles tests in subdirectories like `test/fixture/unit_tests/` with automatic `-test-directory` flag
 - **Custom test directory** - Specify a custom test directory with `--test-dir`
 - **Flexible** - Works with both `terraform test` and `tofu test` commands (tries tofu first, then terraform)
 - **Command selection** - Explicitly choose `tofu` or `terraform` with `--command`
 - **Verbose mode** - Optional verbose output for debugging
 
+#### Test Directory Auto-Detection
+
+The hook searches for unit test directories in this priority order:
+
+1. `test/fixture/unit_tests/` ← **Nested fixture structure**
+2. `test/fixture/unit/` ← **Nested fixture structure**
+3. `test/unit/` ← **Nested under test**
+4. `tests/unit/`
+5. `test/`
+6. `tests/`
+7. Any directory ending with `_test`
+
+When tests are found in subdirectories (e.g., `test/fixture/unit_tests/`), the hook automatically detects the structure and applies the `-test-directory` flag, allowing it to work from your project root without manual directory changes.
+
+#### Unit Test Directory Structures
+
+**Standard flat structure** (works automatically):
+```
+project-root/
+├── test/
+│   ├── main.tf
+│   └── main.tftest.hcl
+```
+
+**Nested fixture structure** (works automatically with auto-detection):
+```
+project-root/
+├── test/
+│   └── fixture/
+│       └── unit_tests/
+│           ├── main.tf
+│           └── main.tftest.hcl
+```
+
+**How auto-detection works:**
+
+When the hook finds tests at `test/fixture/unit_tests/`, it:
+
+1. Changes to directory `test/fixture/`
+2. Runs: `tofu test -test-directory unit_tests`
+3. All relative paths resolve correctly
+4. **No manual `cd` commands needed!**
+
 #### Unit Test Usage
 
-**In your `.pre-commit-config.yaml`:**
+**In your `.pre-commit-config.yaml` (basic - uses auto-detection):**
 
 ```yaml
 repos:
-  - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
     rev: v0.1.0
     hooks:
       - id: check-tofu-unit-tests
         stages: [pre-push]  # Recommended: run on push, not every commit
 ```
 
-**With custom test directory:**
+This works automatically for:
+
+- ✅ Standard structures: `test/`, `tests/`, `test/unit/`, etc.
+- ✅ Nested fixtures: `test/fixture/unit_tests/`, `test/fixture/unit/`
+- ✅ No configuration needed!
+
+**With explicit test directory:**
 
 ```yaml
       - id: check-tofu-unit-tests
         stages: [pre-push]
-        args: ['--test-dir=my-custom-tests']
+        args: ['--test-dir=test/fixture']  # Points to parent directory
 ```
 
 **Force OpenTofu or Terraform:**
@@ -646,6 +696,17 @@ repos:
         args: ['--command=tofu']  # or '--command=terraform'
 ```
 
+**Combine multiple arguments:**
+
+```yaml
+      - id: check-tofu-unit-tests
+        stages: [pre-push]
+        args:
+          - '--test-dir=test/fixture'
+          - '--command=tofu'
+          - '--verbose'
+```
+
 **Run manually:**
 
 ```bash
@@ -653,7 +714,7 @@ repos:
 python check_tofu_unit_tests.py
 
 # Specify custom directory
-python check_tofu_unit_tests.py --test-dir=./my-tests
+python check_tofu_unit_tests.py --test-dir=./test/fixture
 
 # Use OpenTofu specifically
 python check_tofu_unit_tests.py --command=tofu
@@ -663,9 +724,48 @@ python check_tofu_unit_tests.py --command=terraform
 
 # Verbose output
 python check_tofu_unit_tests.py --verbose
+
+# Combine arguments
+python check_tofu_unit_tests.py --test-dir=test/fixture --command=tofu --verbose
 ```
 
-### 5. TOFU Integration Test Runner (`check-tofu-integration-tests`)
+#### Real-World Example: Nested Fixture Structure
+
+If your project has tests in `test/fixture/unit_tests/`:
+
+```
+my-terraform-project/
+├── .pre-commit-config.yaml
+├── main.tf
+├── test/
+│   └── fixture/
+│       └── unit_tests/
+│           ├── main.tf
+│           └── main.tftest.hcl
+```
+
+**Just use the basic configuration:**
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
+    rev: v0.1.0
+    hooks:
+      - id: check-tofu-unit-tests
+        stages: [pre-push]
+```
+
+The hook will:
+
+1. ✅ Find `test/fixture/unit_tests/` automatically
+2. ✅ Detect that tests are in a subdirectory
+3. ✅ Change to `test/fixture/`
+4. ✅ Run `tofu test -test-directory unit_tests`
+5. ✅ Return control to project root
+6. ✅ All done - no manual steps needed!
+
+### 6. TOFU Integration Test Runner (`check-tofu-integration-tests`)
 
 #### Overview
 
@@ -673,24 +773,161 @@ Runs Terraform/OpenTofu integration tests (`terraform test` or `tofu test`) as p
 
 #### Integration Test Features
 
-- **Auto-detection** - Automatically finds integration test directories (`integration_tests/`, `integration/`, `tests/integration/`, or `test/integration/`)
+- **Auto-detection** - Automatically finds integration test directories in standard and nested locations
+- **Nested test support** - Handles tests in subdirectories like `test/fixture/integration_tests/` with automatic `-test-directory` flag
 - **Custom test directory** - Specify a custom integration test directory with `--test-dir`
 - **Flexible** - Works with both `terraform test` and `tofu test` commands (tries tofu first, then terraform)
 - **Command selection** - Explicitly choose `tofu` or `terraform` with `--command`
 - **Verbose mode** - Optional verbose output for debugging
 
+#### Integration Test Directory Discovery
+
+The hook searches for integration test directories in this priority order:
+
+1. `test/fixture/integration_tests/` ← **Nested fixture structure**
+2. `test/fixture/integration/` ← **Nested fixture structure**
+3. `test/integration/` ← **Nested under test**
+4. `tests/integration/`
+5. `integration_tests/`
+6. `integration/`
+7. Any directory with "integration" in the name
+
+When tests are found in subdirectories (e.g., `test/fixture/integration_tests/`), the hook automatically detects the structure and applies the `-test-directory` flag, allowing it to work from your project root without manual directory changes.
+
+#### Integration Test Directory Structures
+
+**Standard flat structure** (works automatically):
+
+```tree
+project-root/
+├── integration/
+│   ├── main.tf
+│   └── main.tftest.hcl
+```
+
+**Nested fixture structure** (works automatically with auto-detection):
+
+```tree
+project-root/
+├── test/
+│   └── fixture/
+│       └── integration_tests/
+│           ├── main.tf
+│           └── main.tftest.hcl
+```
+
+**How auto-detection works:**
+
+When the hook finds tests at `test/fixture/integration_tests/`, it:
+
+1. Changes to directory `test/fixture/`
+2. Runs: `tofu test -test-directory integration_tests`
+3. All relative paths resolve correctly
+4. **No manual `cd` commands needed!**
+
 #### Integration Test Usage
 
-**In your `.pre-commit-config.yaml`:**
+**In your `.pre-commit-config.yaml` (basic - uses auto-detection):**
 
 ```yaml
 repos:
-  - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
     rev: v0.1.0
     hooks:
       - id: check-tofu-integration-tests
         stages: [pre-push]  # Recommended: run on push, not every commit
 ```
+
+This works automatically for:
+
+- ✅ Standard structures: `integration/`, `integration_tests/`, `test/integration/`, etc.
+- ✅ Nested fixtures: `test/fixture/integration_tests/`, `test/fixture/integration/`
+- ✅ No configuration needed!
+
+**With explicit test directory:**
+
+```yaml
+      - id: check-tofu-integration-tests
+        stages: [pre-push]
+        args: ['--test-dir=test/fixture']  # Points to parent directory
+```
+
+**Force OpenTofu or Terraform:**
+
+```yaml
+      - id: check-tofu-integration-tests
+        stages: [pre-push]
+        args: ['--command=tofu']  # or '--command=terraform'
+```
+
+**Combine multiple arguments:**
+
+```yaml
+      - id: check-tofu-integration-tests
+        stages: [pre-push]
+        args:
+          - '--test-dir=test/fixture'
+          - '--command=tofu'
+          - '--verbose'
+```
+
+**Run manually:**
+
+```bash
+# Auto-detect integration test directory (tries tofu first, then terraform)
+python check_tofu_integration_tests.py
+
+# Specify custom directory
+python check_tofu_integration_tests.py --test-dir=./test/fixture
+
+# Use OpenTofu specifically
+python check_tofu_integration_tests.py --command=tofu
+
+# Use Terraform specifically
+python check_tofu_integration_tests.py --command=terraform
+
+# Verbose output
+python check_tofu_integration_tests.py --verbose
+
+# Combine arguments
+python check_tofu_integration_tests.py --test-dir=test/fixture --command=tofu --verbose
+```
+
+#### Integration Test Real-World Example: Nested Fixture Structure
+
+If your project has tests in `test/fixture/integration_tests/`:
+
+```tree
+my-terraform-project/
+├── .pre-commit-config.yaml
+├── main.tf
+├── test/
+│   └── fixture/
+│       └── integration_tests/
+│           ├── main.tf
+│           └── main.tftest.hcl
+```
+
+**Just use the basic configuration:**
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
+    rev: v0.1.0
+    hooks:
+      - id: check-tofu-integration-tests
+        stages: [pre-push]
+```
+
+The hook will:
+
+1. ✅ Find `test/fixture/integration_tests/` automatically
+2. ✅ Detect that tests are in a subdirectory
+3. ✅ Change to `test/fixture/`
+4. ✅ Run `tofu test -test-directory integration_tests`
+5. ✅ Return control to project root
+6. ✅ All done - no manual steps needed!
 
 **With custom test directory:**
 

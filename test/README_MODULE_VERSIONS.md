@@ -298,7 +298,7 @@ test_module_versions:
 
 **Solution**: Ensure you're running from repository root:
 ```bash
-cd /path/to/terraform-provider-convention-checker
+cd /path/to/terraform-precommit-checks
 python test/test_module_versions.py
 ```
 
