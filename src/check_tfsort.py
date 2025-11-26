@@ -2,9 +2,9 @@
 """
 Pre-commit hook to verify Terraform files are sorted per tfsort conventions.
 
-This hook checks that variable, output, locals, and terraform blocks in .tf files
-are sorted alphabetically as per tfsort standards. It focuses specifically on
-outputs.tf and variables.tf files but can check any .tf file.
+This hook checks that .tf files are properly sorted according to tfsort standards.
+It uses the actual tfsort binary (if available) for accurate validation, or falls
+back to a built-in block order check if tfsort is not installed.
 
 tfsort conventions:
 - variable blocks sorted alphabetically by name
@@ -12,14 +12,20 @@ tfsort conventions:
 - locals blocks sorted alphabetically by name
 - terraform blocks sorted alphabetically by name
 - Proper spacing between blocks
+- No unnecessary leading or trailing newlines
+
+Reference: https://github.com/AlexNabokikh/tfsort
 """
 
 import argparse
+import difflib
 import io
 import re
+import shutil
+import subprocess  # nosec B404 - subprocess is used safely with list arguments
 import sys
 from pathlib import Path
-from typing import List, NamedTuple, Tuple
+from typing import List, NamedTuple, Optional, Tuple
 
 # Ensure UTF-8 output on Windows
 if sys.platform == "win32":
@@ -45,10 +51,95 @@ class TFSortChecker:
     LOCALS_PATTERN = re.compile(r"^\s*locals\s*\{", re.MULTILINE)
     TERRAFORM_PATTERN = re.compile(r"^\s*terraform\s*\{", re.MULTILINE)
 
-    def __init__(self, files: List[str]):
-        """Initialize checker with list of files to check."""
+    def __init__(self, files: List[str], use_tfsort_binary: bool = True):
+        """Initialize checker with list of files to check.
+
+        Args:
+            files: List of file paths to check
+            use_tfsort_binary: Whether to use the tfsort binary if available.
+                             If False, uses built-in block order checking only.
+        """
         self.files = files
         self.errors: List[Tuple[str, int, str]] = []
+        self.use_tfsort_binary = use_tfsort_binary
+        self._tfsort_path: Optional[str] = None
+        self._tfsort_checked = False
+
+    def _find_tfsort(self) -> Optional[str]:
+        """Find the tfsort binary in PATH.
+
+        Returns:
+            Path to tfsort binary if found, None otherwise.
+        """
+        if self._tfsort_checked:
+            return self._tfsort_path
+
+        self._tfsort_checked = True
+        self._tfsort_path = shutil.which("tfsort")
+        return self._tfsort_path
+
+    def _check_with_tfsort_binary(self, file_path: str) -> Optional[Tuple[bool, str]]:
+        """Check a file using the tfsort binary's dry-run mode.
+
+        Args:
+            file_path: Path to the file to check
+
+        Returns:
+            Tuple of (is_sorted, diff_output) if tfsort ran successfully,
+            None if tfsort is not available or failed.
+        """
+        if not self.use_tfsort_binary:
+            return None
+
+        tfsort_path = self._find_tfsort()
+        if not tfsort_path:
+            return None
+
+        try:
+            # Read original file content
+            path = Path(file_path)
+            original_content = path.read_text(encoding="utf-8")
+
+            # Run tfsort in dry-run mode to get what the sorted output would be
+            # tfsort --dry-run outputs the sorted content to stdout
+            result = subprocess.run(  # nosec B603 - arguments are list (not shell injection risk)
+                [tfsort_path, "--dry-run", str(path)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            # tfsort returns 0 on success
+            if result.returncode != 0:
+                # If tfsort fails, fall back to built-in checking
+                return None
+
+            sorted_content = result.stdout
+
+            # Compare original with sorted
+            if original_content == sorted_content:
+                return (True, "")
+
+            # Generate a diff for helpful output
+            original_lines = original_content.splitlines(keepends=True)
+            sorted_lines = sorted_content.splitlines(keepends=True)
+
+            diff = list(
+                difflib.unified_diff(
+                    original_lines,
+                    sorted_lines,
+                    fromfile=f"{file_path} (current)",
+                    tofile=f"{file_path} (after tfsort)",
+                    lineterm="",
+                )
+            )
+
+            diff_output = "".join(diff)
+            return (False, diff_output)
+
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
+            # If anything goes wrong, fall back to built-in checking
+            return None
 
     @staticmethod
     def find_block_end(content: str, start_pos: int) -> int:
@@ -168,31 +259,21 @@ class TFSortChecker:
 
         return errors
 
-    def check_file(self, file_path: str) -> bool:
+    def _check_file_with_builtin(self, file_path: str, content: str) -> bool:
         """
-        Check a single file for tfsort compliance.
+        Check a file using built-in block order checking.
+
+        This is used as a fallback when tfsort binary is not available.
+        Note: This only checks block order, not spacing or formatting.
 
         Args:
             file_path: Path to file to check
+            content: File content
 
         Returns:
             True if file passes checks, False if errors found
         """
-        path = Path(file_path)
-
-        # Only check .tf files
-        if path.suffix != ".tf":
-            return True
-
-        # Focus on outputs.tf and variables.tf, but allow checking any .tf file
-        file_name = path.name.lower()
-
-        try:
-            content = path.read_text(encoding="utf-8")
-        except Exception as e:
-            print(f"❌ Error reading {file_path}: {e}", file=sys.stderr)
-            return False
-
+        file_name = Path(file_path).name.lower()
         has_errors = False
 
         # Check variable blocks (especially in variables.tf)
@@ -213,14 +294,67 @@ class TFSortChecker:
                     self.errors.extend(errors)
                     has_errors = True
 
-        # Check locals blocks (in any .tf file)
-        # Note: locals blocks don't have names, so we just detect them
-        # We don't sort locals blocks themselves, just detect presence
-
-        # Check terraform blocks (in any .tf file)
-        # Note: terraform blocks don't have names, so we just detect them
-
         return not has_errors
+
+    def check_file(self, file_path: str) -> bool:
+        """
+        Check a single file for tfsort compliance.
+
+        Uses the tfsort binary if available for comprehensive checking
+        (block order, spacing, formatting). Falls back to built-in
+        block order checking if tfsort is not installed.
+
+        Args:
+            file_path: Path to file to check
+
+        Returns:
+            True if file passes checks, False if errors found
+        """
+        path = Path(file_path)
+
+        # Only check .tf files
+        if path.suffix != ".tf":
+            return True
+
+        try:
+            content = path.read_text(encoding="utf-8")
+        except Exception as e:
+            print(f"❌ Error reading {file_path}: {e}", file=sys.stderr)
+            return False
+
+        # Try using tfsort binary first (most comprehensive)
+        tfsort_result = self._check_with_tfsort_binary(file_path)
+
+        if tfsort_result is not None:
+            is_sorted, diff_output = tfsort_result
+            if is_sorted:
+                return True
+            else:
+                # File is not sorted - record the error with diff
+                error_msg = (
+                    "❌ File is not properly sorted per tfsort conventions.\n"
+                    "   \n"
+                    "   The following changes would be made by tfsort:\n"
+                    "   \n"
+                )
+                # Indent the diff for readability
+                if diff_output:
+                    diff_lines = diff_output.split("\n")
+                    # Limit diff output to first 30 lines to avoid overwhelming output
+                    if len(diff_lines) > 30:
+                        diff_preview = "\n".join(diff_lines[:30])
+                        diff_preview += f"\n   ... ({len(diff_lines) - 30} more lines)"
+                    else:
+                        diff_preview = diff_output
+                    error_msg += f"   {diff_preview.replace(chr(10), chr(10) + '   ')}\n"
+                error_msg += (
+                    f"   \n   💡 Fix: Run 'tfsort {file_path}' to automatically sort the file."
+                )
+                self.errors.append((file_path, 1, error_msg))
+                return False
+
+        # Fall back to built-in checking (block order only)
+        return self._check_file_with_builtin(file_path, content)
 
     def run(self) -> int:
         """
@@ -231,6 +365,12 @@ class TFSortChecker:
         """
         all_passed = True
 
+        # Show which mode we're using
+        if self.use_tfsort_binary and self._find_tfsort():
+            mode_msg = "Using tfsort binary for comprehensive checking"
+        else:
+            mode_msg = "Using built-in block order checking (tfsort not found)"
+
         for file_path in self.files:
             if not self.check_file(file_path):
                 all_passed = False
@@ -238,6 +378,7 @@ class TFSortChecker:
         if self.errors:
             print("\n" + "=" * 80)
             print("🔍 TFSort Compliance Check Failed")
+            print(f"   ({mode_msg})")
             print("=" * 80 + "\n")
 
             for file_path, line_num, error_msg in self.errors:
@@ -258,6 +399,7 @@ class TFSortChecker:
 
         if self.files:
             print("✅ All files are properly sorted per tfsort conventions")
+            print(f"   ({mode_msg})")
 
         return 0 if all_passed else 1
 
@@ -277,6 +419,11 @@ def main() -> int:
         action="store_true",
         help="Check all .tf files in directory",
     )
+    parser.add_argument(
+        "--no-tfsort-binary",
+        action="store_true",
+        help="Disable use of tfsort binary, use built-in checking only",
+    )
 
     args = parser.parse_args()
 
@@ -289,7 +436,8 @@ def main() -> int:
         print("No files to check", file=sys.stderr)
         return 0
 
-    checker = TFSortChecker(files)
+    use_tfsort = not args.no_tfsort_binary
+    checker = TFSortChecker(files, use_tfsort_binary=use_tfsort)
     return checker.run()
 
 

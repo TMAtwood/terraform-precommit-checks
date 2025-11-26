@@ -332,45 +332,88 @@ Verifies that variable and output blocks in Terraform files are sorted alphabeti
 
 #### Features
 
+- **Comprehensive validation** - Uses the actual `tfsort` binary for complete checking (when installed)
 - **Alphabetical sorting** - Ensures variables and outputs are in alphabetical order
+- **Spacing & formatting** - Detects incorrect spacing and unnecessary leading/trailing newlines
 - **Focused checking** - Primarily checks `variables.tf` and `outputs.tf` files
-- **Clear error messages** - Shows current vs. expected order with line numbers
-- **Easy fixes** - Provides commands to automatically fix sorting issues
+- **Clear error messages** - Shows a diff of what tfsort would change
+- **Graceful fallback** - Falls back to built-in block order checking if tfsort is not installed
+
+#### How It Works
+
+The checker operates in two modes:
+
+1. **With tfsort binary (recommended)**: When `tfsort` is installed and available in PATH, the hook runs `tfsort --dry-run` and compares the output to the original file. This catches **all** issues that tfsort would fix, including:
+   - Block ordering (variables, outputs, locals, terraform)
+   - Spacing between blocks
+   - Leading/trailing newlines
+   - Any other formatting tfsort normalizes
+
+2. **Without tfsort binary (fallback)**: When `tfsort` is not installed, the hook uses built-in checking that only verifies block alphabetical order. This is less comprehensive but still catches major sorting issues.
 
 #### Usage
 
 ```bash
 # Check specific files
-python check_tfsort.py variables.tf outputs.tf
+python src/check_tfsort.py variables.tf outputs.tf
 
 # Via pre-commit (runs automatically on variables.tf and outputs.tf)
 pre-commit run check-tfsort --all-files
 
-# Install tfsort to automatically fix sorting
-# See: https://github.com/AlexNabokikh/tfsort
+# Disable tfsort binary usage (use built-in checking only)
+python src/check_tfsort.py --no-tfsort-binary variables.tf
 ```
 
 #### Example Output
 
-When sorting issues are detected:
+When tfsort binary is available and sorting issues are detected:
 
+```text
+🔍 TFSort Compliance Check Failed
+   (Using tfsort binary for comprehensive checking)
+
+📁 File: variables.tf
+📍 Line: 1
+❌ File is not properly sorted per tfsort conventions.
+
+   The following changes would be made by tfsort:
+
+   --- variables.tf (current)
+   +++ variables.tf (after tfsort)
+   @@ -1,2 +1,2 @@
+   -variable "zebra" {}
+   +variable "apple" {}
+   +variable "zebra" {}
+   -variable "apple" {}
+
+   💡 Fix: Run 'tfsort variables.tf' to automatically sort the file.
 ```
-❌ Variable blocks are not sorted alphabetically.
-   Expected 'apple_config' but found 'zebra_config' at line 4.
 
-   Current order: zebra_config, apple_config, monkey_config, banana_config
-   Expected order: apple_config, banana_config, monkey_config, zebra_config
+When using built-in fallback (tfsort not installed):
+
+```text
+🔍 TFSort Compliance Check Failed
+   (Using built-in block order checking (tfsort not found))
+
+❌ Variable blocks are not sorted alphabetically.
+   Expected 'apple' but found 'zebra' at line 1.
+
+   Current order: zebra, apple
+   Expected order: apple, zebra
 
    💡 Fix: Run 'tfsort variables.tf' or manually reorder blocks alphabetically.
 ```
 
 #### Integration with tfsort
 
-This hook verifies compliance with tfsort standards. To automatically fix sorting issues, install [tfsort](https://github.com/AlexNabokikh/tfsort):
+For comprehensive validation, install [tfsort](https://github.com/AlexNabokikh/tfsort):
 
 ```bash
 # Install tfsort (see GitHub releases for download links)
 # https://github.com/AlexNabokikh/tfsort/releases
+
+# Verify installation
+tfsort --version
 
 # Fix a single file
 tfsort variables.tf
@@ -378,6 +421,13 @@ tfsort variables.tf
 # Fix all .tf files recursively
 tfsort -r .
 ```
+
+**Why install tfsort?**
+
+- The hook will automatically detect and use tfsort for more comprehensive validation
+- Catches spacing and formatting issues, not just block order
+- Provides a diff showing exactly what would change
+- tfsort can automatically fix all detected issues
 
 ### 4. Tag Validation Checker (`check-terraform-tags`)
 
