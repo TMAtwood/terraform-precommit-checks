@@ -23,27 +23,48 @@ def find_test_directory() -> Optional[Path]:
     """
     Automatically detect the TOFU test directory.
 
-    Common patterns:
+    Searches for test directories in common patterns including nested structures:
     - tests/
     - test/
+    - test/unit/
     - *_test/
+    - Any directory containing .tftest.hcl files
 
     Returns:
         Path to test directory if found, None otherwise.
     """
     current_dir = Path.cwd()
 
-    # Check common test directory names
-    common_names = ["tests", "test"]
-    for name in common_names:
-        test_dir = current_dir / name
-        if test_dir.exists() and test_dir.is_dir() and list(test_dir.glob("**/*.tf")):
-            return test_dir
+    # Check for .tftest.hcl files in specific locations (most specific first)
+    test_locations = [
+        current_dir / "test" / "fixture" / "unit_tests",
+        current_dir / "test" / "fixture" / "unit",
+        current_dir / "test" / "unit",
+        current_dir / "tests" / "unit",
+        current_dir / "test",
+        current_dir / "tests",
+    ]
+
+    for test_dir in test_locations:
+        if test_dir.exists() and test_dir.is_dir():
+            # Look for .tftest.hcl files (OpenTofu test marker)
+            if list(test_dir.glob("**/*.tftest.hcl")):
+                return test_dir
+            # Fallback to .tf files
+            if list(test_dir.glob("**/*.tf")):
+                return test_dir
 
     # Look for directories ending with _test
-    for path in current_dir.iterdir():
-        if path.is_dir() and path.name.endswith("_test") and list(path.glob("**/*.tf")):
-            return path
+    try:
+        for path in current_dir.iterdir():
+            if (
+                path.is_dir()
+                and path.name.endswith("_test")
+                and (list(path.glob("**/*.tftest.hcl")) or list(path.glob("**/*.tf")))
+            ):
+                return path
+    except (PermissionError, OSError):
+        pass
 
     return None
 

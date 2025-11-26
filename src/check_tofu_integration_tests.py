@@ -23,33 +23,49 @@ def find_integration_test_directory() -> Optional[Path]:
     """
     Automatically detect the TOFU integration test directory.
 
-    Common patterns:
+    Searches for integration test directories in common patterns including nested structures:
+    - test/integration/
+    - test/fixtures/integration/
     - integration_tests/
     - integration/
     - tests/integration/
-    - test/integration/
+    - Any directory with "integration" in name containing .tftest.hcl files
 
     Returns:
         Path to integration test directory if found, None otherwise.
     """
     current_dir = Path.cwd()
 
-    # Check common integration test directory names
-    common_names = [
-        "integration_tests",
-        "integration",
-        "tests/integration",
-        "test/integration",
+    # Check for .tftest.hcl files in specific locations (most specific first)
+    test_locations = [
+        current_dir / "test" / "fixture" / "integration_tests",
+        current_dir / "test" / "fixture" / "integration",
+        current_dir / "test" / "integration",
+        current_dir / "tests" / "integration",
+        current_dir / "integration_tests",
+        current_dir / "integration",
     ]
-    for name in common_names:
-        test_dir = current_dir / name
-        if test_dir.exists() and test_dir.is_dir() and list(test_dir.glob("**/*.tf")):
-            return test_dir
 
-    # Look for directories containing "integration"
-    for path in current_dir.iterdir():
-        if path.is_dir() and "integration" in path.name.lower() and list(path.glob("**/*.tf")):
-            return path
+    for test_dir in test_locations:
+        if test_dir.exists() and test_dir.is_dir():
+            # Look for .tftest.hcl files (OpenTofu test marker)
+            if list(test_dir.glob("**/*.tftest.hcl")):
+                return test_dir
+            # Fallback to .tf files
+            if list(test_dir.glob("**/*.tf")):
+                return test_dir
+
+    # Look for directories containing "integration" in name
+    try:
+        for path in current_dir.iterdir():
+            if (
+                path.is_dir()
+                and "integration" in path.name.lower()
+                and (list(path.glob("**/*.tftest.hcl")) or list(path.glob("**/*.tf")))
+            ):
+                return path
+    except (PermissionError, OSError):
+        pass
 
     return None
 
