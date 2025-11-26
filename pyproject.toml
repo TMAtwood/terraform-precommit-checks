@@ -89,7 +89,9 @@ select = [
     "C4",  # flake8-comprehensions
     "SIM", # flake8-simplify
 ]
-ignore = []
+ignore = [
+    "SIM117",  # Nested `with` required for Python 3.8 compatibility (parenthesized context managers added in 3.9)
+]
 
 [tool.ruff.lint.per-file-ignores]
 "test/*.py" = ["S101"]  # Allow assert in tests

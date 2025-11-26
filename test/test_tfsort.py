@@ -643,3 +643,215 @@ variable "bbb_naive" {
         checker = TFSortChecker([str(test_file)])
         result = checker.check_file(str(test_file))
         assert result is True
+
+
+class TestTfsortBinaryIntegration:
+    """Test suite for tfsort binary integration."""
+
+    def test_init_with_use_tfsort_binary_flag(self):
+        """Test initialization with use_tfsort_binary flag."""
+        checker = TFSortChecker(["test.tf"], use_tfsort_binary=True)
+        assert checker.use_tfsort_binary is True
+
+        checker2 = TFSortChecker(["test.tf"], use_tfsort_binary=False)
+        assert checker2.use_tfsort_binary is False
+
+    def test_find_tfsort_not_installed(self):
+        """Test _find_tfsort when tfsort is not installed."""
+        with patch("shutil.which", return_value=None):
+            checker = TFSortChecker(["test.tf"])
+            result = checker._find_tfsort()
+            assert result is None
+            # Should be cached
+            assert checker._tfsort_checked is True
+            assert checker._tfsort_path is None
+
+    def test_find_tfsort_installed(self):
+        """Test _find_tfsort when tfsort is installed."""
+        with patch("shutil.which", return_value="/usr/local/bin/tfsort"):
+            checker = TFSortChecker(["test.tf"])
+            result = checker._find_tfsort()
+            assert result == "/usr/local/bin/tfsort"
+            assert checker._tfsort_checked is True
+            assert checker._tfsort_path == "/usr/local/bin/tfsort"
+
+    def test_find_tfsort_caching(self):
+        """Test _find_tfsort caches the result."""
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/local/bin/tfsort"
+            checker = TFSortChecker(["test.tf"])
+
+            # First call
+            result1 = checker._find_tfsort()
+            # Second call
+            result2 = checker._find_tfsort()
+
+            # Should only be called once due to caching
+            assert mock_which.call_count == 1
+            assert result1 == result2
+
+    def test_check_with_tfsort_binary_disabled(self):
+        """Test _check_with_tfsort_binary when disabled."""
+        checker = TFSortChecker(["test.tf"], use_tfsort_binary=False)
+        result = checker._check_with_tfsort_binary("test.tf")
+        assert result is None
+
+    def test_check_with_tfsort_binary_not_installed(self, tmp_path):
+        """Test _check_with_tfsort_binary when tfsort is not installed."""
+        test_file = tmp_path / "test.tf"
+        test_file.write_text('variable "aaa" {}')
+
+        with patch("shutil.which", return_value=None):
+            checker = TFSortChecker([str(test_file)])
+            result = checker._check_with_tfsort_binary(str(test_file))
+            assert result is None
+
+    def test_check_with_tfsort_binary_file_sorted(self, tmp_path):
+        """Test _check_with_tfsort_binary when file is sorted."""
+        test_file = tmp_path / "test.tf"
+        content = 'variable "aaa" {}\nvariable "bbb" {}'
+        test_file.write_text(content)
+
+        # Mock tfsort to return the same content (file is sorted)
+        with patch("shutil.which", return_value="/usr/local/bin/tfsort"):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value.returncode = 0
+                mock_run.return_value.stdout = content
+
+                checker = TFSortChecker([str(test_file)])
+                result = checker._check_with_tfsort_binary(str(test_file))
+
+                assert result is not None
+                is_sorted, diff_output = result
+                assert is_sorted is True
+                assert diff_output == ""
+
+    def test_check_with_tfsort_binary_file_unsorted(self, tmp_path):
+        """Test _check_with_tfsort_binary when file is unsorted."""
+        test_file = tmp_path / "test.tf"
+        original_content = 'variable "zzz" {}\nvariable "aaa" {}'
+        sorted_content = 'variable "aaa" {}\nvariable "zzz" {}'
+        test_file.write_text(original_content)
+
+        with patch("shutil.which", return_value="/usr/local/bin/tfsort"):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value.returncode = 0
+                mock_run.return_value.stdout = sorted_content
+
+                checker = TFSortChecker([str(test_file)])
+                result = checker._check_with_tfsort_binary(str(test_file))
+
+                assert result is not None
+                is_sorted, diff_output = result
+                assert is_sorted is False
+                assert len(diff_output) > 0
+
+    def test_check_with_tfsort_binary_subprocess_error(self, tmp_path):
+        """Test _check_with_tfsort_binary handles subprocess errors."""
+        test_file = tmp_path / "test.tf"
+        test_file.write_text('variable "aaa" {}')
+
+        import subprocess
+
+        with patch("shutil.which", return_value="/usr/local/bin/tfsort"):
+            with patch("subprocess.run", side_effect=subprocess.SubprocessError):
+                checker = TFSortChecker([str(test_file)])
+                result = checker._check_with_tfsort_binary(str(test_file))
+                assert result is None
+
+    def test_check_with_tfsort_binary_timeout(self, tmp_path):
+        """Test _check_with_tfsort_binary handles timeout."""
+        test_file = tmp_path / "test.tf"
+        test_file.write_text('variable "aaa" {}')
+
+        import subprocess
+
+        with patch("shutil.which", return_value="/usr/local/bin/tfsort"):
+            with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("tfsort", 30)):
+                checker = TFSortChecker([str(test_file)])
+                result = checker._check_with_tfsort_binary(str(test_file))
+                assert result is None
+
+    def test_check_with_tfsort_binary_nonzero_exit(self, tmp_path):
+        """Test _check_with_tfsort_binary handles non-zero exit code."""
+        test_file = tmp_path / "test.tf"
+        test_file.write_text('variable "aaa" {}')
+
+        with patch("shutil.which", return_value="/usr/local/bin/tfsort"):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value.returncode = 1
+                mock_run.return_value.stdout = ""
+
+                checker = TFSortChecker([str(test_file)])
+                result = checker._check_with_tfsort_binary(str(test_file))
+                # Non-zero exit should cause fallback
+                assert result is None
+
+    def test_check_file_uses_tfsort_binary_when_available(self, tmp_path):
+        """Test check_file uses tfsort binary when available."""
+        test_file = tmp_path / "test.tf"
+        content = 'variable "aaa" {}'
+        test_file.write_text(content)
+
+        with patch("shutil.which", return_value="/usr/local/bin/tfsort"):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value.returncode = 0
+                mock_run.return_value.stdout = content
+
+                checker = TFSortChecker([str(test_file)])
+                result = checker.check_file(str(test_file))
+
+                assert result is True
+                mock_run.assert_called_once()
+
+    def test_check_file_falls_back_to_builtin(self, tmp_path):
+        """Test check_file falls back to builtin when tfsort not available."""
+        test_file = tmp_path / "variables.tf"
+        test_file.write_text('variable "aaa" {}\nvariable "bbb" {}')
+
+        with patch("shutil.which", return_value=None):
+            checker = TFSortChecker([str(test_file)])
+            result = checker.check_file(str(test_file))
+
+            assert result is True
+
+    def test_run_shows_mode_with_tfsort(self, tmp_path, capsys):
+        """Test run shows mode message when using tfsort binary."""
+        test_file = tmp_path / "test.tf"
+        content = 'variable "aaa" {}'
+        test_file.write_text(content)
+
+        with patch("shutil.which", return_value="/usr/local/bin/tfsort"):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value.returncode = 0
+                mock_run.return_value.stdout = content
+
+                checker = TFSortChecker([str(test_file)])
+                checker.run()
+
+                captured = capsys.readouterr()
+                assert "Using tfsort binary" in captured.out
+
+    def test_run_shows_mode_without_tfsort(self, tmp_path, capsys):
+        """Test run shows mode message when tfsort not available."""
+        test_file = tmp_path / "test.tf"
+        test_file.write_text('variable "aaa" {}')
+
+        with patch("shutil.which", return_value=None):
+            checker = TFSortChecker([str(test_file)])
+            checker.run()
+
+            captured = capsys.readouterr()
+            assert "Using built-in block order checking" in captured.out
+
+    def test_main_with_no_tfsort_binary_flag(self, tmp_path):
+        """Test main with --no-tfsort-binary flag."""
+        test_file = tmp_path / "test.tf"
+        test_file.write_text('variable "aaa" {}')
+
+        with patch("sys.argv", ["check_tfsort.py", "--no-tfsort-binary", str(test_file)]):
+            with patch("shutil.which", return_value="/usr/local/bin/tfsort") as mock_which:
+                result = main()
+                # With --no-tfsort-binary, shutil.which should not be called
+                mock_which.assert_not_called()
+                assert result == 0
