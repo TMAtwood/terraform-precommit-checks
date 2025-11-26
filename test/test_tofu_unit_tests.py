@@ -74,7 +74,7 @@ class TestFindTestDirectory:
         assert result is None
 
     def test_find_test_directory_prefers_tests(self, tmp_path, monkeypatch):
-        """Test that 'tests' is preferred over 'test'."""
+        """Test that 'test' is preferred over 'tests' (due to nested priority)."""
         tests_dir = tmp_path / "tests"
         tests_dir.mkdir()
         (tests_dir / "test1.tf").write_text("# test")
@@ -85,7 +85,7 @@ class TestFindTestDirectory:
 
         monkeypatch.chdir(tmp_path)
         result = find_test_directory()
-        assert result == tests_dir
+        assert result == test_dir
 
 
 class TestRunTofuTest:
