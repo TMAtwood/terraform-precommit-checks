@@ -154,19 +154,31 @@ python src/check_terraform_tags.py \
 
 ### Pattern Validation
 
-Pattern validation uses regular expressions to enforce specific formats for tag values:
+Pattern validation uses regular expressions to enforce specific formats for tag values. Use `pattern` when you need flexible validation beyond exact matches.
 
-1. **Use `pattern` for flexible validation** - Define a regex pattern that tag values must match
-2. **Common patterns**:
-   - **Email**: `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
-   - **Cost Center** (CC-####): `^CC-[0-9]{4}$`
-   - **Ticket ID** (PROJ-###): `^[A-Z]+-[0-9]+$`
-   - **Date** (YYYY-MM-DD): `^[0-9]{4}-[0-9]{2}-[0-9]{2}$`
-   - **Version** (v#.#.#): `^v[0-9]+\.[0-9]+\.[0-9]+$`
-3. **Pattern vs allowed_values**: Use `allowed_values` for exact matches, `pattern` for format validation
-4. **Invalid patterns** are caught and reported clearly
+#### When to Use Pattern Validation
 
-**Example configuration:**
+- **Email addresses**: Validate team owner contact info
+- **Cost codes**: Enforce company cost center format (e.g., CC-####)
+- **Ticket IDs**: Ensure tickets are tracked (e.g., JIRA-123, BUG-456)
+- **Dates**: Enforce specific date formats for compliance tracking
+- **Versions**: Validate semantic versioning (v1.2.3)
+- **Phone numbers**: Enforce standard phone formats
+- **DNS names**: Validate domain/subdomain format
+- **IPv4 addresses**: Validate IP address format
+
+#### Pattern vs Allowed Values
+
+| Use Case | Use `allowed_values` | Use `pattern` |
+|----------|-------------------|---------|
+| Exact predefined values | ✅ Yes | ❌ No |
+| Environment (Dev, Staging, Prod) | ✅ Yes | ❌ No |
+| Flexible format validation | ❌ No | ✅ Yes |
+| Email addresses | ❌ No | ✅ Yes |
+| Cost codes with format | ❌ No | ✅ Yes |
+| Phone numbers | ❌ No | ✅ Yes |
+
+#### Common Pattern Examples
 
 ```yaml
 required_tags:
@@ -174,37 +186,276 @@ required_tags:
   - name: Environment
     allowed_values: [Development, Staging, Production]
 
-  # Pattern validation for email format
+  # Email format validation
   - name: Owner
     pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
 
-  # Pattern validation for cost center format
+  # Cost center format (CC-####)
   - name: CostCenter
     pattern: "^CC-[0-9]{4}$"
+
+  # Ticket ID format (PROJECT-####)
+  - name: TicketID
+    pattern: "^[A-Z]+-[0-9]+$"
+
+  # Date format (YYYY-MM-DD)
+  - name: CreatedDate
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  # Semantic version format (v#.#.#)
+  - name: Version
+    pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+  # Phone number format (###-###-####)
+  - name: EmergencyContact
+    pattern: "^[0-9]{3}-[0-9]{3}-[0-9]{4}$"
+
+  # AWS account ID (###########)
+  - name: AWSAccountID
+    pattern: "^[0-9]{12}$"
+
+  # Project code (alpha-numeric with dashes)
+  - name: ProjectCode
+    pattern: "^[A-Z0-9][A-Z0-9-]{2,}[A-Z0-9]$"
 ```
 
-**Pattern validation examples:**
+#### Real-World Pattern Examples
+
+##### Example 1: Email Owner Tag
 
 ```hcl
-# ✅ PASS - Matches email pattern
-tags = {
-  Owner = "admin@example.com"
+# Configuration
+required_tags:
+  - name: Owner
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+# ✅ VALID - Standard email
+resource "aws_instance" "web" {
+  tags = {
+    Owner = "admin@example.com"
+  }
 }
 
-# ❌ FAIL - Does not match email pattern
-tags = {
-  Owner = "admin"  # Missing @domain
+# ✅ VALID - Email with subdomain
+resource "aws_vpc" "main" {
+  tags = {
+    Owner = "devops@internal.company.com"
+  }
 }
 
-# ✅ PASS - Matches CC-#### pattern
-tags = {
-  CostCenter = "CC-1234"
+# ✅ VALID - Email with plus addressing
+resource "aws_s3_bucket" "logs" {
+  tags = {
+    Owner = "team+terraform@company.com"
+  }
 }
 
-# ❌ FAIL - Does not match CC-#### pattern
-tags = {
-  CostCenter = "1234"  # Missing CC- prefix
+# ❌ INVALID - Missing @ symbol
+resource "aws_subnet" "web" {
+  tags = {
+    Owner = "admin.example.com"
+  }
 }
+
+# ❌ INVALID - Missing domain extension
+resource "aws_security_group" "app" {
+  tags = {
+    Owner = "admin@company"
+  }
+}
+```
+
+##### Example 2: Cost Center Tag
+
+```hcl
+# Configuration
+required_tags:
+  - name: CostCenter
+    pattern: "^CC-[0-9]{4}$"
+
+# ✅ VALID - Standard format CC-####
+resource "aws_instance" "production" {
+  tags = {
+    CostCenter = "CC-1234"
+  }
+}
+
+# ✅ VALID - Cost center with leading zeros
+resource "aws_rds_instance" "db" {
+  tags = {
+    CostCenter = "CC-0001"
+  }
+}
+
+# ❌ INVALID - Missing CC- prefix
+resource "aws_s3_bucket" "backup" {
+  tags = {
+    CostCenter = "1234"
+  }
+}
+
+# ❌ INVALID - Wrong number of digits (3 instead of 4)
+resource "aws_vpc" "staging" {
+  tags = {
+    CostCenter = "CC-123"
+  }
+}
+
+# ❌ INVALID - Wrong prefix (COST instead of CC)
+resource "aws_lb" "api" {
+  tags = {
+    CostCenter = "COST-1234"
+  }
+}
+```
+
+##### Example 3: Ticket ID Tag (Flexible Project Codes)
+
+```hcl
+# Configuration
+required_tags:
+  - name: TicketID
+    pattern: "^[A-Z]+-[0-9]+$"
+
+# ✅ VALID - JIRA format
+resource "aws_instance" "web" {
+  tags = {
+    TicketID = "JIRA-5678"
+  }
+}
+
+# ✅ VALID - BUG tracking format
+resource "aws_s3_bucket" "fix" {
+  tags = {
+    TicketID = "BUG-123"
+  }
+}
+
+# ✅ VALID - Infrastructure ticket
+resource "aws_vpc" "infra" {
+  tags = {
+    TicketID = "INFRA-999"
+  }
+}
+
+# ✅ VALID - Single letter project
+resource "aws_security_group" "app" {
+  tags = {
+    TicketID = "A-1"
+  }
+}
+
+# ❌ INVALID - Lowercase letters (should be uppercase)
+resource "aws_subnet" "web" {
+  tags = {
+    TicketID = "jira-5678"
+  }
+}
+
+# ❌ INVALID - Missing dash separator
+resource "aws_vpc" "app" {
+  tags = {
+    TicketID = "JIRA5678"
+  }
+}
+
+# ❌ INVALID - Missing ticket number
+resource "aws_lb" "api" {
+  tags = {
+    TicketID = "BUG-"
+  }
+}
+```
+
+##### Example 4: Complex Multi-Pattern Configuration
+
+```hcl
+# Configuration
+required_tags:
+  - name: Environment
+    allowed_values: [Development, Staging, Production]
+
+  - name: Owner
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  - name: CostCenter
+    pattern: "^CC-[0-9]{4}$"
+
+  - name: TicketID
+    pattern: "^[A-Z]+-[0-9]+$"
+
+# ✅ ALL VALID - Complete multi-pattern validation
+resource "aws_instance" "production_web" {
+  ami           = "ami-12345678"
+  instance_type = "t2.micro"
+
+  tags = {
+    Environment = "Production"              # Allowed value match
+    Owner       = "devops@company.com"      # Email pattern match
+    CostCenter  = "CC-1234"                 # Cost center pattern match
+    TicketID    = "INFRA-1001"              # Ticket ID pattern match
+  }
+}
+
+# ❌ MULTIPLE FAILURES - All patterns violated
+resource "aws_instance" "bad" {
+  ami           = "ami-12345678"
+  instance_type = "t2.micro"
+
+  tags = {
+    Environment = "testing"                 # ❌ Not in allowed values
+    Owner       = "notanemail"              # ❌ Not email format
+    CostCenter  = "COST-1234"               # ❌ Wrong prefix
+    TicketID    = "ticket123"               # ❌ Missing dash, lowercase
+  }
+}
+```
+
+#### Pattern Writing Tips
+
+| Need | Pattern | Example |
+|------|---------|---------|
+| Email | `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$` | user@example.com |
+| Cost Code CC-#### | `^CC-[0-9]{4}$` | CC-1234 |
+| Ticket ID PROJECT-### | `^[A-Z]+-[0-9]+$` | JIRA-123 |
+| Date YYYY-MM-DD | `^[0-9]{4}-[0-9]{2}-[0-9]{2}$` | 2024-01-15 |
+| Version v#.#.# | `^v[0-9]+\.[0-9]+\.[0-9]+$` | v1.2.3 |
+| Phone ###-###-#### | `^[0-9]{3}-[0-9]{3}-[0-9]{4}$` | 555-123-4567 |
+| AWS Account ID | `^[0-9]{12}$` | 123456789012 |
+| DNS Name | `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$` | app.example.com |
+
+#### Validating Your Patterns
+
+Test your regex patterns before using them in production:
+
+```bash
+# Quick Python test
+python3 -c "
+import re
+pattern = r'^CC-[0-9]{4}\$'
+test_values = ['CC-1234', 'cc-1234', 'CC-123', 'CC-12345']
+for v in test_values:
+    match = re.match(pattern, v)
+    print(f'{v}: {'✓ MATCH' if match else '✗ NO MATCH'}')"
+
+# Output:
+# CC-1234: ✓ MATCH
+# cc-1234: ✗ NO MATCH
+# CC-123: ✗ NO MATCH
+# CC-12345: ✗ NO MATCH
+```
+
+#### Pattern Validation Error Messages
+
+When a pattern validation fails, you'll see clear error output:
+
+```
+Tag 'Owner' value 'admin.example.com' does not match required pattern
+'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+Tag 'CostCenter' value '1234' does not match required pattern '^CC-[0-9]{4}$'
+
+Tag 'TicketID' value 'jira-5678' does not match required pattern '^[A-Z]+-[0-9]+$'
 ```
 
 ### Taggable Resources
