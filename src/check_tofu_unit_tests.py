@@ -69,6 +69,27 @@ def find_test_directory() -> Optional[Path]:
     return None
 
 
+def get_test_subdirectory(test_dir: Path) -> Optional[str]:
+    """
+    Detect if test files are in subdirectories and need -test-directory flag.
+
+    Args:
+        test_dir: Path to the test directory
+
+    Returns:
+        Subdirectory name if needed, None if tests are in root of test_dir
+    """
+    # Check if .tftest.hcl files are in subdirectories
+    test_files = list(test_dir.glob("**/*.tftest.hcl"))
+    if test_files:
+        # Get the first test file's parent directory relative to test_dir
+        first_test_parent = test_files[0].parent
+        if first_test_parent != test_dir:
+            # Return relative path from test_dir
+            return str(first_test_parent.relative_to(test_dir))
+    return None
+
+
 def run_tofu_test(test_dir: Path, verbose: bool = False, command: Optional[str] = None) -> int:
     """
     Run TOFU test command in the specified directory.
@@ -87,6 +108,11 @@ def run_tofu_test(test_dir: Path, verbose: bool = False, command: Optional[str] 
 
     # Determine which commands to try
     commands = [command] if command else ["tofu", "terraform"]
+
+    # Check if tests are in subdirectories
+    test_subdir = get_test_subdirectory(test_dir)
+    if test_subdir:
+        print(f"📂 Tests found in subdirectory: {test_subdir}")
 
     for cmd in commands:
         try:
@@ -107,6 +133,8 @@ def run_tofu_test(test_dir: Path, verbose: bool = False, command: Optional[str] 
 
             # Run the test
             test_args = [cmd, "test"]
+            if test_subdir:
+                test_args.extend(["-test-directory", test_subdir])
             if verbose:
                 test_args.append("-verbose")
 

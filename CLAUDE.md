@@ -483,7 +483,7 @@ The [.pre-commit-hooks.yaml](.pre-commit-hooks.yaml) file defines hooks for remo
 Example of how users consume these hooks:
 ```yaml
 repos:
-  - repo: https://github.com/TMAtwood/terraform-provider-convention-checker
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
     rev: v1.0.0
     hooks:
       - id: check-provider-config
