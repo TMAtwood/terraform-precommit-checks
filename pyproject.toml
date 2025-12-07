@@ -46,6 +46,7 @@ check-tfsort = "check_tfsort:main"
 check-tofu-unit-tests = "check_tofu_unit_tests:main"
 check-tofu-integration-tests = "check_tofu_integration_tests:main"
 check-terraform-tags = "check_terraform_tags:main"
+check-template-sync = "check_template_sync:main"
 
 # Setuptools configuration
 [tool.setuptools]
@@ -56,6 +57,7 @@ py-modules = [
     "check_tofu_unit_tests",
     "check_tofu_integration_tests",
     "check_terraform_tags",
+    "check_template_sync",
 ]
 
 [tool.setuptools.package-dir]

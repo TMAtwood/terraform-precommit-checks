@@ -2,7 +2,7 @@
 
 ## What You Have
 
-This repository provides **6 comprehensive pre-commit hooks** for Terraform/OpenTofu that work with **any cloud provider**:
+This repository provides **7 comprehensive pre-commit hooks** for Terraform/OpenTofu that work with **any cloud provider**:
 
 | Hook | Purpose | Stage |
 |------|---------|-------|
@@ -10,6 +10,7 @@ This repository provides **6 comprehensive pre-commit hooks** for Terraform/Open
 | **check-module-versions** | Ensures version consistency | Automatic |
 | **check-tfsort** | Validates alphabetical sorting | Automatic |
 | **check-terraform-tags** | Enforces tagging standards | Automatic |
+| **check-template-sync** | Validates scaffold file consistency | Manual |
 | **check-tofu-unit-tests** | Runs unit tests | Manual |
 | **check-tofu-integration-tests** | Runs integration tests | Manual |
 
@@ -32,6 +33,8 @@ repos:
         args: [--config, .terraform-tags.yaml]
 
       # Manual hooks (run separately)
+      # - id: check-template-sync
+      #   args: [--template-path, /path/to/your/template]
       # - id: check-tofu-unit-tests
       # - id: check-tofu-integration-tests
 ```
@@ -57,6 +60,7 @@ pre-commit run check-provider-config --all-files
 pre-commit run check-terraform-tags --all-files
 
 # Run manual test hooks
+pre-commit run check-template-sync --hook-stage manual
 pre-commit run check-tofu-unit-tests --hook-stage manual
 ```
 
@@ -194,7 +198,40 @@ optional_tags:
 
 **Learn more:** [TAG_VALIDATION.md](TAG_VALIDATION.md)
 
-### 5. Unit Test Runner
+### 5. Template Sync Checker
+
+**Validates:** Repository scaffold files match a reference template
+
+**Why it matters:** Ensures all your Terraform modules use the same support files:
+
+- `.editorconfig` - Same editor settings
+- `.gitignore` - Same ignore patterns
+- `.pre-commit-config.yaml` - Same CI/CD pipeline
+- `Jenkinsfile` - Consistent automation
+- `.terraform-tags.yaml` - Unified tagging rules
+
+**Example issue detected:**
+
+```text
+❌ FAILS - File content mismatch: .editorconfig
+   Repository SHA256: d40a86ccab9553003e0c477f2313c4539ee1182852f2597...
+   Template SHA256:   2a7e7dab35d8a34bddf8fa5fd0ae7b46759b9c82962abc...
+   → Update this file to match the template version.
+```
+
+**Usage:**
+
+```bash
+# Run template sync check
+pre-commit run check-template-sync --hook-stage manual
+
+# Or run directly
+python src/check_template_sync.py --template-path /path/to/template
+```
+
+**Perfect for:** Organizations maintaining multiple modules that should share common scaffold files.
+
+### 6. Unit Test Runner
 
 **Runs:** Terraform/OpenTofu unit tests automatically
 
@@ -206,7 +243,7 @@ pre-commit run check-tofu-unit-tests --hook-stage manual
 
 **Auto-detects test directories:** `tests/`, `test/`, `*_test/`
 
-### 6. Integration Test Runner
+### 7. Integration Test Runner
 
 **Runs:** Terraform/OpenTofu integration tests
 

@@ -1,0 +1,19 @@
+# Terraform Tag Validation Configuration
+# This file defines required and optional tags for Terraform resources
+
+required_tags:
+  - name: "Environment"
+    allowed_values:
+      - "Development"
+      - "Staging"
+      - "Production"
+
+  - name: "Owner"
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  - name: "CostCenter"
+    pattern: "^CC-[0-9]{4}$"
+
+optional_tags:
+  - name: "Project"
+  - name: "Department"

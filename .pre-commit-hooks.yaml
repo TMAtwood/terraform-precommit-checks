@@ -72,3 +72,17 @@
   files: \.tf$
   pass_filenames: true
   minimum_pre_commit_version: '4.0.0'
+
+- id: check-template-sync
+  name: Validate repository scaffold files against template
+  description: |
+    Ensures that repository scaffold files (like .editorconfig, .gitignore,
+    .pre-commit-config.yaml, Jenkinsfile, .terraform-tags.yaml, etc.) are present
+    and up-to-date by comparing them against a reference template directory using
+    SHA256 hash comparison. Requires --template-path argument pointing to the
+    reference template directory.
+  entry: check-template-sync
+  language: python
+  pass_filenames: false
+  always_run: true
+  minimum_pre_commit_version: '4.0.0'

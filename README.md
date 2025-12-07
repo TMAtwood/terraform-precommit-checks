@@ -8,8 +8,9 @@ This repository provides pre-commit hooks for Terraform/OpenTofu projects:
 2. **Module Version Checker** - Ensures consistent module versions across all references
 3. **TFSort Checker** - Verifies variables and outputs are alphabetically sorted per tfsort conventions
 4. **Tag Validation Checker** - Validates resource tags for compliance with required tags, case sensitivity, and allowed values
-5. **TOFU Unit Test Runner** - Ensures Terraform/OpenTofu unit tests pass before commits/pushes
-6. **TOFU Integration Test Runner** - Runs integration tests for comprehensive validation
+5. **Template Sync Checker** - Validates repository scaffold files match a reference template using SHA256 hash comparison
+6. **TOFU Unit Test Runner** - Ensures Terraform/OpenTofu unit tests pass before commits/pushes
+7. **TOFU Integration Test Runner** - Runs integration tests for comprehensive validation
 
 **Provider-Agnostic:** These tools work universally with any Terraform provider - whether you're using AWS, Azure, Google Cloud, Oracle Cloud, VMware, Kubernetes, or any of the 3,000+ providers in the Terraform Registry.
 
@@ -95,6 +96,10 @@ repos:
       - id: check-tfsort
       - id: check-terraform-tags
         args: [--config, .terraform-tags.yaml]  # Optional: specify config file
+      # Optional: Template sync checker (manual stage)
+      # - id: check-template-sync
+      #   args: [--template-path, /path/to/your/template]
+      #   stages: [manual]
       # Optional: Add test hooks (run on push, not every commit)
       # - id: check-tofu-unit-tests
       #   stages: [pre-push]
@@ -653,9 +658,164 @@ See [docs/TAG_VALIDATION.md](docs/TAG_VALIDATION.md) for:
 - CI/CD integration
 - Troubleshooting guide
 
-### 5. TOFU Unit Test Runner (`check-tofu-unit-tests`)
+### 5. Template Sync Checker (`check-template-sync`)
 
 #### Description
+
+Validates that repository scaffold files (like `.editorconfig`, `.gitignore`, `.pre-commit-config.yaml`, `Jenkinsfile`, `.terraform-tags.yaml`, etc.) match a reference template directory using SHA256 hash comparison. This ensures consistency and standardization across multiple OpenTofu/Terraform module repositories.
+
+#### Features
+
+- **SHA256 Hash Comparison** - Detects even single-character differences between files
+- **Directory Structure Validation** - Ensures all required directories exist
+- **Missing File Detection** - Identifies scaffold files that should be present
+- **Content Mismatch Reporting** - Shows exact hash differences for debugging
+- **Smart Exclusions** - Automatically skips `.git`, `__pycache__`, `.terraform`, `node_modules`, etc.
+- **Verbose Error Messages** - Provides detailed information about each discrepancy
+- **Manual Stage Hook** - Runs on-demand rather than every commit
+
+#### Use Case
+
+Perfect for organizations maintaining multiple Terraform module repositories where you want to ensure:
+
+- All modules use the same `.editorconfig` settings
+- All modules have consistent CI/CD pipeline definitions (`Jenkinsfile`, GitHub Actions)
+- All modules follow the same tag validation rules (`.terraform-tags.yaml`)
+- All modules use the same pre-commit configuration (`.pre-commit-config.yaml`)
+
+#### Usage
+
+1. Create a reference template directory with your standard scaffold files:
+
+```bash
+# Example template structure
+template/
+├── .editorconfig
+├── .gitignore
+├── .pre-commit-config.yaml
+├── .terraform-tags.yaml
+├── Jenkinsfile
+└── .github/
+    └── workflows/
+        └── terraform.yml
+```
+
+2. Add to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/TMAtwood/terraform-precommit-checks
+    rev: v0.1.0
+    hooks:
+      - id: check-template-sync
+        args: [--template-path, /path/to/your/template]
+        stages: [manual]  # Run manually, not on every commit
+```
+
+3. Run the checker:
+
+```bash
+# Run manually when you want to check template sync
+pre-commit run check-template-sync --hook-stage manual
+
+# Or run directly with Python
+python src/check_template_sync.py --template-path /path/to/template
+```
+
+#### Example Output
+
+**When repository matches template:**
+
+```
+✅ Repository structure matches template perfectly!
+```
+
+**When discrepancies are found:**
+
+```
+================================================================================
+❌ TEMPLATE SYNC ERRORS DETECTED
+================================================================================
+
+The repository does not match the template structure.
+Template path: /path/to/template
+Repository path: /current/repo
+
+Found 2 error(s):
+
+📄 File content mismatch: .editorconfig
+   Repository file: /current/repo/.editorconfig
+   Template file:   /path/to/template/.editorconfig
+   Repository SHA256: d40a86ccab9553003e0c477f2313c4539ee1182852f2597775ce2c3dd78ff7f3
+   Template SHA256:   2a7e7dab35d8a34bddf8fa5fd0ae7b46759b9c82962abc0e88925734ffce2138
+   → The file exists but has different content than the template.
+   → Update this file to match the template version.
+   → This ensures consistency and includes the latest best practices.
+--------------------------------------------------------------------------------
+📄 Missing file: Jenkinsfile
+   Expected location: /current/repo/Jenkinsfile
+   Template location: /path/to/template/Jenkinsfile
+   → This file exists in the template but not in the repository.
+   → Copy this file from the template to maintain consistency.
+--------------------------------------------------------------------------------
+
+================================================================================
+💡 HOW TO FIX:
+================================================================================
+
+1. Review each error above to understand what's missing or different
+2. For missing directories: Create them to match the template structure
+3. For missing files: Copy them from the template directory
+4. For mismatched files: Update them to match the template version
+5. Re-run the hook to verify all issues are resolved
+
+The template ensures your repository follows the latest best practices
+and includes all necessary support files for OpenTofu modules.
+
+================================================================================
+```
+
+#### Advanced Usage
+
+**Specify custom repository root:**
+
+```bash
+python src/check_template_sync.py \
+  --template-path ~/org/templates/terraform-module \
+  --repo-root /path/to/specific/repo
+```
+
+**Use in CI/CD:**
+
+```yaml
+# GitHub Actions example
+- name: Validate scaffold files
+  run: |
+    python src/check_template_sync.py \
+      --template-path ${{ github.workspace }}/templates/terraform-module
+```
+
+**Exclude specific directories:**
+
+The checker automatically excludes:
+
+- Version control: `.git`
+- Build artifacts: `__pycache__`, `.pytest_cache`, `.terraform`
+- Dependencies: `node_modules`, `venv`
+- State files: `.terraform.lock.hcl`, `terraform.tfstate`
+- Variable files: `*.tfvars` (may contain sensitive data)
+
+#### Best Practices
+
+1. **Version Control Your Template** - Store your reference template in a separate Git repository
+2. **Automate Template Updates** - Use CI/CD to automatically update modules when template changes
+3. **Run Periodically** - Schedule template sync checks weekly/monthly to catch drift
+4. **Document Template Changes** - Maintain a CHANGELOG for template updates
+5. **Test Template Changes** - Test template modifications in a development module first
+
+### 6. TOFU Unit Test Runner (`check-tofu-unit-tests`)
+
+#### Overview
 
 Runs Terraform/OpenTofu unit tests (`terraform test` or `tofu test`) as part of your pre-commit workflow to ensure unit tests pass before code is pushed.
 
@@ -815,7 +975,7 @@ The hook will:
 5. ✅ Return control to project root
 6. ✅ All done - no manual steps needed!
 
-### 6. TOFU Integration Test Runner (`check-tofu-integration-tests`)
+### 7. TOFU Integration Test Runner (`check-tofu-integration-tests`)
 
 #### Overview
 

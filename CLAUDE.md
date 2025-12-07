@@ -57,25 +57,36 @@ When Terraform/OpenTofu modules use direct `provider "name" { }` blocks (old pat
    - Flexible configuration via YAML file or JSON command-line arguments
    - Includes comprehensive built-in lists of taggable resources for AWS, Azure, GCP, Oracle Cloud
 
-7. **.pre-commit-config.yaml** - Pre-commit framework configuration (for local development)
+7. **check_template_sync.py** - Repository scaffold file synchronization checker
+   - Main class: `TemplateSyncChecker`
+   - Validates that repository scaffold files match a reference template directory
+   - Uses SHA256 hash comparison to detect file content differences
+   - Checks for missing files, missing directories, and content mismatches
+   - Supports scaffold files like .editorconfig, .gitignore, .pre-commit-config.yaml, Jenkinsfile, .terraform-tags.yaml
+   - Excludes common directories (.git, **pycache**, .terraform, node_modules, etc.)
+   - Provides verbose error messages with file paths and hash comparisons
+   - Requires `--template-path` argument pointing to reference template directory
+   - Manual stage hook - run with `pre-commit run check-template-sync --hook-stage manual`
+
+8. **.pre-commit-config.yaml** - Pre-commit framework configuration (for local development)
    - Defines all local hooks that run on `.tf` files
    - Includes Python quality, security, and testing hooks
    - Can be extended with additional Terraform hooks (terraform_fmt, terraform_validate, etc.)
 
-8. **.pre-commit-hooks.yaml** - Remote hook definitions
+9. **.pre-commit-hooks.yaml** - Remote hook definitions
    - Defines hooks for remote usage when installed via `repos:` in other projects
    - Specifies hook IDs, entry points, file patterns, and minimum pre-commit version
    - Used when others install this repository as a pre-commit dependency
 
-9. **setup.sh** - Automated installation script (Bash)
-   - Checks for prerequisites (pre-commit, git)
-   - Copies files and installs hooks
-   - Runs initial validation
+10. **setup.sh** - Automated installation script (Bash)
+    - Checks for prerequisites (pre-commit, git)
+    - Copies files and installs hooks
+    - Runs initial validation
 
-10. **verify_multi_cloud.sh** - Multi-provider verification script (Bash)
+11. **verify_multi_cloud.sh** - Multi-provider verification script (Bash)
     - Demonstrates provider-agnostic detection across AWS, Azure, GCP, Oracle
 
-11. **create_version_tag.sh** - Version tagging script (Bash)
+12. **create_version_tag.sh** - Version tagging script (Bash)
     - Creates semantic version tags (e.g., v1.0.0)
     - Moves 'latest' tag to the new version
     - Supports GitVersion integration for automatic version detection
@@ -231,6 +242,60 @@ The tag validation checker validates resource tags/labels for compliance:
      azurerm: [...]
    ```
 
+#### Template Sync Checker
+
+The template sync checker validates repository scaffold files against a reference template:
+
+1. **Initialization and Validation** (`__init__()`):
+   - Validates that template path exists and is a directory
+   - Resolves both template and repository paths to absolute paths
+   - Initializes error and warning lists for tracking issues
+
+2. **Exclusion Logic** (`should_exclude()`):
+   - Excludes common VCS and build directories: `.git`, `__pycache__`, `.terraform`, `node_modules`
+   - Excludes lock files and state files: `.terraform.lock.hcl`, `terraform.tfstate`
+   - Excludes variable files containing sensitive data: `*.tfvars`
+   - Supports both exact matches and pattern-based exclusions
+
+3. **Hash Calculation** (`calculate_sha256()`):
+   - Uses SHA256 hashing for file content comparison
+   - Reads files in 4096-byte chunks for memory efficiency
+   - Returns hexadecimal hash string for comparison
+   - Handles both text and binary files
+
+4. **Template Structure Extraction** (`get_template_structure()`):
+   - Recursively walks template directory using `rglob("*")`
+   - Builds set of directory paths and dict of file paths with hashes
+   - Filters out excluded directories and their contents
+   - Skips files inside excluded parent directories
+
+5. **Directory Validation** (`check_directories()`):
+   - Verifies all template directories exist in repository
+   - Detects missing directories
+   - Detects paths that should be directories but are files
+   - Provides specific error messages with expected locations
+
+6. **File Validation** (`check_files()`):
+   - Checks each template file exists in repository
+   - Compares file content using SHA256 hashes
+   - Detects three types of errors:
+     - Missing files (file exists in template but not in repo)
+     - Content mismatches (file exists but content differs)
+     - Type mismatches (path is directory instead of file)
+   - Reports both repository and template SHA256 hashes for debugging
+
+7. **Error Reporting** (`print_results()`):
+   - Displays warnings (non-fatal issues like unreadable files)
+   - Shows detailed error messages with file paths and hash values
+   - Provides actionable remediation guidance
+   - Uses emojis for visual clarity (📁 directories, 📄 files, ⚠️ warnings)
+
+8. **Usage Pattern**:
+   - Requires `--template-path` argument pointing to reference template
+   - Optional `--repo-root` argument (defaults to current directory)
+   - Manual stage hook for explicit invocation
+   - Typical use: `pre-commit run check-template-sync --hook-stage manual`
+
 ## Common Development Commands
 
 ### Testing the hooks
@@ -256,6 +321,10 @@ python src/check_terraform_tags.py --config test/.terraform-tags-test.yaml test/
 # Test tag validation with inline JSON args
 python src/check_terraform_tags.py --required-tags '[{"name":"Environment","allowed_values":["Development","Staging","Production"]},{"name":"Owner"}]' test/test_tags_valid.tf
 
+# Test template sync checker
+python src/check_template_sync.py --template-path test/template_reference --repo-root test/template_test_repo  # Should pass
+python src/check_template_sync.py --template-path test/template_reference --repo-root test/template_test_repo_mismatch  # Should fail
+
 # Test multiple providers
 python check_provider_config.py test/*.tf
 
@@ -268,9 +337,10 @@ pre-commit run check-terraform-tags --all-files
 # Run all pre-commit hooks
 pre-commit run --all-files
 
-# Run manual stage hooks (TOFU tests)
+# Run manual stage hooks (TOFU tests and template sync)
 pre-commit run check-tofu-unit-tests --hook-stage manual
 pre-commit run check-tofu-integration-tests --hook-stage manual
+pre-commit run check-template-sync --hook-stage manual
 
 # Run full multi-cloud verification
 ./verify_multi_cloud.sh
@@ -329,39 +399,57 @@ pre-commit install
 
 ```text
 .
-├── check_provider_config.py         # Provider convention checker hook
-├── check_module_versions.py         # Module version conflict checker
-├── check_tfsort.py                  # TFSort compliance checker
-├── check_tofu_unit_tests.py         # Terraform/OpenTofu unit test runner
-├── check_tofu_integration_tests.py  # Terraform/OpenTofu integration test runner
-├── .pre-commit-config.yaml          # Pre-commit hooks configuration (local dev)
-├── .pre-commit-hooks.yaml           # Remote hook definitions (for users)
-├── .secrets.baseline                # detect-secrets baseline file
-├── GitVersion.yml                   # GitVersion configuration
-├── pyproject.toml                   # Python project & tool configuration
-├── requirements.txt                 # Python dependencies
-├── setup.sh                         # Automated installer
-├── verify_multi_cloud.sh            # Multi-provider verification
-├── run_tests.sh                     # Convenience script to run tests from root
-├── create_version_tag.sh            # Version tagging and release script
-├── README.md                        # Primary documentation
+├── src/
+│   ├── check_provider_config.py         # Provider convention checker hook
+│   ├── check_module_versions.py         # Module version conflict checker
+│   ├── check_tfsort.py                  # TFSort compliance checker
+│   ├── check_tofu_unit_tests.py         # Terraform/OpenTofu unit test runner
+│   ├── check_tofu_integration_tests.py  # Terraform/OpenTofu integration test runner
+│   ├── check_terraform_tags.py          # Terraform resource tag validation hook
+│   └── check_template_sync.py           # Repository scaffold file synchronization checker
+├── .pre-commit-config.yaml              # Pre-commit hooks configuration (local dev)
+├── .pre-commit-hooks.yaml               # Remote hook definitions (for users)
+├── .secrets.baseline                    # detect-secrets baseline file
+├── GitVersion.yml                       # GitVersion configuration
+├── pyproject.toml                       # Python project & tool configuration
+├── requirements.txt                     # Python dependencies
+├── setup.sh                             # Automated installer
+├── verify_multi_cloud.sh                # Multi-provider verification
+├── run_tests.sh                         # Convenience script to run tests from root
+├── create_version_tag.sh                # Version tagging and release script
+├── README.md                            # Primary documentation
+├── CLAUDE.md                            # This file - technical architecture for AI assistants
 ├── docs/
-│   ├── START_HERE.md                # Quick start guide
-│   ├── INDEX.md                     # Documentation index
-│   ├── QUICK_REFERENCE.md           # Pattern comparison
-│   └── MULTI_CLOUD_SUPPORT.md       # Multi-cloud examples
+│   ├── START_HERE.md                    # Quick start guide
+│   ├── INDEX.md                         # Documentation index
+│   ├── QUICK_REFERENCE.md               # Pattern comparison
+│   └── MULTI_CLOUD_SUPPORT.md           # Multi-cloud examples
 ├── examples/
-│   ├── example_multi_cloud_module.tf   # 4-provider module example
-│   └── example_multi_cloud_root.tf     # Root module calling examples
+│   ├── example_multi_cloud_module.tf    # 4-provider module example
+│   └── example_multi_cloud_root.tf      # Root module calling examples
 └── test/
-    ├── test_hooks.py                     # Unified automated test suite for all hooks
-    ├── test_module_conflicts.tf          # Module version conflict test (should fail)
-    ├── test_module_consistent.tf         # Consistent module versions (should pass)
-    ├── test_tfsort_unsorted.tf           # Unsorted variables/outputs (should fail)
-    ├── test_tfsort_sorted_variables.tf   # Properly sorted variables (should pass)
-    ├── test_tfsort_sorted_outputs.tf     # Properly sorted outputs (should pass)
-    ├── test_azure_old.tf                 # Azure old-style test case
-    └── [other test cases]                # AWS, GCP, Oracle examples
+    ├── test_provider_config.py          # Unit tests for provider config checker
+    ├── test_module_versions.py          # Unit tests for module version checker
+    ├── test_tfsort.py                   # Unit tests for tfsort checker
+    ├── test_tofu_unit_tests.py          # Unit tests for TOFU unit test runner
+    ├── test_tofu_integration_tests.py   # Unit tests for TOFU integration test runner
+    ├── test_check_terraform_tags_unit.py # Unit tests for tag validation checker
+    ├── test_template_sync.py            # Unit tests for template sync checker
+    ├── template_reference/              # Reference template for testing template sync
+    │   ├── .editorconfig
+    │   ├── .gitignore
+    │   ├── Jenkinsfile
+    │   ├── .terraform-tags.yaml
+    │   └── .github/workflows/terraform.yml
+    ├── template_test_repo/              # Test repo matching template (should pass)
+    ├── template_test_repo_mismatch/     # Test repo with mismatches (should fail)
+    ├── test_module_conflicts.tf         # Module version conflict test (should fail)
+    ├── test_module_consistent.tf        # Consistent module versions (should pass)
+    ├── test_tfsort_unsorted.tf          # Unsorted variables/outputs (should fail)
+    ├── test_tfsort_sorted_variables.tf  # Properly sorted variables (should pass)
+    ├── test_tfsort_sorted_outputs.tf    # Properly sorted outputs (should pass)
+    ├── test_azure_old.tf                # Azure old-style test case
+    └── [other test cases]               # AWS, GCP, Oracle examples
 ```
 
 ## Key Patterns

@@ -85,7 +85,7 @@ repos:
     rev: v2.14
     hooks:
       - id: vulture
-        args: [--min-confidence, '80', 'src/check_provider_config.py', 'src/check_module_versions.py', 'src/check_tfsort.py', 'src/check_terraform_tags.py', 'test/test_hooks.py']
+        args: [--min-confidence, '80', 'src/check_provider_config.py', 'src/check_module_versions.py', 'src/check_tfsort.py', 'src/check_terraform_tags.py', 'src/check_template_sync.py', 'test/test_hooks.py']
         files: ^src/.*\.py$
         # No additional dependencies needed - we only use stdlib
 
@@ -184,9 +184,25 @@ repos:
           case sensitivity and allowed values. Supports AWS, Azure, GCP, Oracle Cloud,
           and all other providers.
 
+      - id: check-template-sync
+        name: Validate repository scaffold files against template
+        entry: python -m src.check_template_sync
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
+        # Uncomment and customize the following line with your template path:
+        # args: [--template-path, /path/to/your/template]
+        description: |
+          Ensures that repository scaffold files (like .editorconfig, .gitignore,
+          .pre-commit-config.yaml, Jenkinsfile, .terraform-tags.yaml, etc.) are present
+          and up-to-date by comparing them against a reference template directory using
+          SHA256 hash comparison. Requires --template-path argument.
+          Run manually: pre-commit run check-template-sync --hook-stage manual
+
       - id: pytest
         name: Run all test suites
-        entry: python -m pytest test/test_provider_config.py test/test_module_versions.py test/test_tfsort.py test/test_tofu_unit_tests.py test/test_tofu_integration_tests.py test/test_check_terraform_tags_unit.py -v
+        entry: python -m pytest test/test_provider_config.py test/test_module_versions.py test/test_tfsort.py test/test_tofu_unit_tests.py test/test_tofu_integration_tests.py test/test_check_terraform_tags_unit.py test/test_template_sync.py -v
         language: python
         pass_filenames: false
         always_run: true
@@ -196,7 +212,7 @@ repos:
 
       - id: pytest-coverage
         name: Run pytest with coverage
-        entry: python -m pytest test/test_provider_config.py test/test_module_versions.py test/test_tfsort.py test/test_tofu_unit_tests.py test/test_tofu_integration_tests.py test/test_check_terraform_tags_unit.py --cov=src.check_provider_config --cov=src.check_module_versions --cov=src.check_tfsort --cov=src.check_tofu_unit_tests --cov=src.check_tofu_integration_tests --cov=src.check_terraform_tags --cov-report=term --cov-report=html --cov-fail-under=80
+        entry: python -m pytest test/test_provider_config.py test/test_module_versions.py test/test_tfsort.py test/test_tofu_unit_tests.py test/test_tofu_integration_tests.py test/test_check_terraform_tags_unit.py test/test_template_sync.py --cov=src.check_provider_config --cov=src.check_module_versions --cov=src.check_tfsort --cov=src.check_tofu_unit_tests --cov=src.check_tofu_integration_tests --cov=src.check_terraform_tags --cov=src.check_template_sync --cov-report=term --cov-report=html --cov-fail-under=80
         language: python
         pass_filenames: false
         always_run: true
