@@ -191,7 +191,7 @@ repos:
         always_run: true
         stages: [manual]
         # Uncomment and customize the following line with your template path:
-        # args: [--template-path, /path/to/your/template]
+        args: [--template-path, ../tf-modules-reference-template]
         description: |
           Ensures that repository scaffold files (like .editorconfig, .gitignore,
           .pre-commit-config.yaml, Jenkinsfile, .terraform-tags.yaml, etc.) are present
