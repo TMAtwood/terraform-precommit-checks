@@ -17,7 +17,6 @@ import argparse
 import hashlib
 import sys
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
 
 
 class TemplateSyncChecker:
@@ -61,8 +60,8 @@ class TemplateSyncChecker:
         """
         self.template_path = Path(template_path).resolve()
         self.repo_root = Path(repo_root).resolve()
-        self.errors: List[str] = []
-        self.warnings: List[str] = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
 
         # Validate template path exists
         if not self.template_path.exists():
@@ -119,15 +118,15 @@ class TemplateSyncChecker:
         except Exception as e:
             raise RuntimeError(f"Failed to calculate hash for {file_path}: {e}") from e
 
-    def get_template_structure(self) -> Tuple[Set[Path], Dict[Path, str]]:
+    def get_template_structure(self) -> tuple[set[Path], dict[Path, str]]:
         """
         Walk the template directory and build a structure of directories and files.
 
         Returns:
             Tuple of (set of relative directory paths, dict of relative file paths to SHA256 hashes)
         """
-        template_dirs: Set[Path] = set()
-        template_files: Dict[Path, str] = {}
+        template_dirs: set[Path] = set()
+        template_files: dict[Path, str] = {}
 
         for item in self.template_path.rglob("*"):
             # Skip excluded items
@@ -166,7 +165,7 @@ class TemplateSyncChecker:
 
         return template_dirs, template_files
 
-    def check_directories(self, template_dirs: Set[Path]) -> None:
+    def check_directories(self, template_dirs: set[Path]) -> None:
         """
         Check that all directories in the template exist in the repository.
 
@@ -191,7 +190,7 @@ class TemplateSyncChecker:
                     f"   → Remove the file and create a directory instead."
                 )
 
-    def check_files(self, template_files: Dict[Path, str]) -> None:
+    def check_files(self, template_files: dict[Path, str]) -> None:
         """
         Check that all files in the template exist in the repository with matching content.
 

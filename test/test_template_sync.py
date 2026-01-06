@@ -191,6 +191,59 @@ class TestTemplateSyncChecker:
         assert len(dirs) == 0
         assert len(files) == 0
 
+    def test_get_template_structure_hash_calculation_error(self, tmp_path):
+        """Test get_template_structure handles hash calculation errors gracefully."""
+        template_dir = tmp_path / "template"
+        template_dir.mkdir()
+
+        # Create a file
+        test_file = template_dir / "test.txt"
+        test_file.write_text("content")
+
+        checker = TemplateSyncChecker(str(template_dir), str(tmp_path))
+
+        # Mock calculate_sha256 to raise exception
+        with patch.object(
+            checker, "calculate_sha256", side_effect=PermissionError("Access denied")
+        ):
+            dirs, files = checker.get_template_structure()
+
+            # Should add warning and continue
+            assert len(checker.warnings) > 0
+            assert "Could not calculate hash" in checker.warnings[0]
+            # File should not be in the files dict
+            assert len(files) == 0
+
+    def test_get_template_structure_handles_various_exceptions(self, tmp_path):
+        """Test get_template_structure handles different types of exceptions."""
+        template_dir = tmp_path / "template"
+        template_dir.mkdir()
+
+        # Create multiple files
+        (template_dir / "file1.txt").write_text("content1")
+        (template_dir / "file2.txt").write_text("content2")
+
+        checker = TemplateSyncChecker(str(template_dir), str(tmp_path))
+
+        # Mock calculate_sha256 to raise different exceptions for different files
+        original_calculate_sha256 = checker.calculate_sha256
+        call_count = [0]
+
+        def mock_calculate_sha256(path):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise OSError("I/O error")
+            else:
+                return original_calculate_sha256(path)
+
+        with patch.object(checker, "calculate_sha256", side_effect=mock_calculate_sha256):
+            dirs, files = checker.get_template_structure()
+
+            # Should have one warning and one successful file
+            assert len(checker.warnings) == 1
+            assert "I/O error" in checker.warnings[0]
+            assert len(files) == 1
+
     def test_check_directories_all_present(self, tmp_path):
         """Test check_directories when all directories are present."""
         template_dir = tmp_path / "template"
@@ -345,6 +398,41 @@ class TestTemplateSyncChecker:
 
         assert result is False
         assert len(checker.errors) > 0
+
+    def test_check_sync_handles_template_read_error(self, tmp_path):
+        """Test check_sync handles exceptions when reading template structure."""
+        template_dir = tmp_path / "template"
+        template_dir.mkdir()
+
+        checker = TemplateSyncChecker(str(template_dir), str(tmp_path))
+
+        # Mock get_template_structure to raise exception
+        with patch.object(checker, "get_template_structure", side_effect=OSError("Disk error")):
+            result = checker.check_sync()
+
+            assert result is False
+            assert len(checker.errors) > 0
+            assert "Failed to read template structure" in checker.errors[0]
+            assert "Disk error" in checker.errors[0]
+
+    def test_check_sync_handles_permission_error(self, tmp_path):
+        """Test check_sync handles permission errors when reading template."""
+        template_dir = tmp_path / "template"
+        template_dir.mkdir()
+
+        checker = TemplateSyncChecker(str(template_dir), str(tmp_path))
+
+        # Mock get_template_structure to raise PermissionError
+        with patch.object(
+            checker,
+            "get_template_structure",
+            side_effect=PermissionError("Permission denied"),
+        ):
+            result = checker.check_sync()
+
+            assert result is False
+            assert len(checker.errors) > 0
+            assert "Failed to read template structure" in checker.errors[0]
 
     def test_print_results_no_errors_no_warnings(self, capsys, tmp_path):
         """Test print_results with no errors or warnings."""

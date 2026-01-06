@@ -89,7 +89,7 @@ Add this repository to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-precommit-checks
-    rev: v0.1.0  # Use a specific version tag or branch
+    rev: v1.0.0  # Use a specific version tag or branch
     hooks:
       - id: check-provider-config
       - id: check-module-versions
@@ -493,7 +493,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-precommit-checks
-    rev: v0.1.0
+    rev: v1.0.0
     hooks:
       - id: check-terraform-tags
         args: [--config, .terraform-tags.yaml]
@@ -705,7 +705,7 @@ template/
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-precommit-checks
-    rev: v0.1.0
+    rev: v1.0.0
     hooks:
       - id: check-template-sync
         args: [--template-path, /path/to/your/template]
@@ -878,7 +878,7 @@ When the hook finds tests at `test/fixture/unit_tests/`, it:
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-precommit-checks
-    rev: v0.1.0
+    rev: v1.0.0
     hooks:
       - id: check-tofu-unit-tests
         stages: [pre-push]  # Recommended: run on push, not every commit
@@ -960,7 +960,7 @@ my-terraform-project/
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-precommit-checks
-    rev: v0.1.0
+    rev: v1.0.0
     hooks:
       - id: check-tofu-unit-tests
         stages: [pre-push]
@@ -1042,7 +1042,7 @@ When the hook finds tests at `test/fixture/integration_tests/`, it:
 ```yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-precommit-checks
-    rev: v0.1.0
+    rev: v1.0.0
     hooks:
       - id: check-tofu-integration-tests
         stages: [pre-push]  # Recommended: run on push, not every commit
@@ -1124,7 +1124,7 @@ my-terraform-project/
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/TMAtwood/terraform-precommit-checks
-    rev: v0.1.0
+    rev: v1.0.0
     hooks:
       - id: check-tofu-integration-tests
         stages: [pre-push]
@@ -1188,7 +1188,7 @@ This hook is completely **provider-agnostic** and works with:
 - ✅ **Kubernetes** (kubernetes)
 - ✅ **Any provider** in the [Terraform Registry](https://registry.terraform.io/browse/providers)
 
-See [MULTI_CLOUD_SUPPORT.md](MULTI_CLOUD_SUPPORT.md) for detailed multi-cloud examples and patterns.
+See [docs/PROVIDER_CONFIG_MULTI_CLOUD.md](docs/PROVIDER_CONFIG_MULTI_CLOUD.md) for detailed multi-cloud examples and patterns.
 
 ## Bypassing the Hook (Not Recommended)
 

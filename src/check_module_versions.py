@@ -11,7 +11,7 @@ import argparse
 import io
 import re
 import sys
-from typing import Dict, List, NamedTuple, Optional
+from typing import NamedTuple
 
 # Ensure UTF-8 output on Windows
 if sys.platform == "win32":
@@ -25,8 +25,8 @@ class ModuleReference(NamedTuple):
     file_path: str
     line_number: int
     source: str
-    version: Optional[str]
-    git_ref: Optional[str]
+    version: str | None
+    git_ref: str | None
     normalized_source: str
 
 
@@ -50,7 +50,7 @@ class ModuleVersionChecker:
 
     def __init__(self) -> None:
         """Initialize the checker."""
-        self.module_references: Dict[str, List[ModuleReference]] = {}
+        self.module_references: dict[str, list[ModuleReference]] = {}
 
     @staticmethod
     def normalize_source(source: str) -> str:
@@ -82,7 +82,7 @@ class ModuleVersionChecker:
         return normalized
 
     @staticmethod
-    def extract_git_ref(source: str) -> Optional[str]:
+    def extract_git_ref(source: str) -> str | None:
         """
         Extract git ref/tag/commit from module source.
 
@@ -109,7 +109,7 @@ class ModuleVersionChecker:
 
     def parse_module_block(
         self, content: str, start_pos: int, file_path: str, start_line: int
-    ) -> Optional[ModuleReference]:
+    ) -> ModuleReference | None:
         """
         Parse a module block to extract source and version information.
 
@@ -168,7 +168,7 @@ class ModuleVersionChecker:
             normalized_source=normalized_source,
         )
 
-    def check_file(self, file_path: str) -> List[ModuleReference]:
+    def check_file(self, file_path: str) -> list[ModuleReference]:
         """
         Check a single Terraform file for module references.
 
@@ -206,7 +206,7 @@ class ModuleVersionChecker:
 
         return references
 
-    def find_conflicts(self) -> Dict[str, List[ModuleReference]]:
+    def find_conflicts(self) -> dict[str, list[ModuleReference]]:
         """
         Find modules with conflicting versions/refs.
 
@@ -236,7 +236,7 @@ class ModuleVersionChecker:
 
         return conflicts
 
-    def format_conflict_report(self, conflicts: Dict[str, List[ModuleReference]]) -> str:
+    def format_conflict_report(self, conflicts: dict[str, list[ModuleReference]]) -> str:
         """
         Format conflicts into a human-readable report.
 
@@ -288,7 +288,7 @@ class ModuleVersionChecker:
         return "\n".join(lines)
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """
     Main entry point for the module version checker.
 

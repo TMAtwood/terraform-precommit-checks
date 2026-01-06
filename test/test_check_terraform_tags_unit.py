@@ -186,6 +186,80 @@ optional_tags:
         finally:
             Path(temp_file).unlink()
 
+    def test_load_config_pyyaml_not_available_uses_json(self, capsys):
+        """Test config loading falls back to JSON when PyYAML not available."""
+        # Create a file with JSON content (but .yaml extension to trigger YAML path first)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            config_data = {
+                "required_tags": [{"name": "Environment", "allowed_values": ["Dev", "Prod"]}],
+                "optional_tags": [{"name": "Project"}],
+            }
+            json.dump(config_data, f)
+            f.flush()
+            temp_file = f.name
+
+        try:
+            # Use sys.modules to block yaml import
+            import sys
+
+            yaml_module = sys.modules.get("yaml", None)
+            # Add a fake yaml module that will raise ImportError when accessed
+            sys.modules["yaml"] = None  # Setting to None causes import to fail
+            try:
+                checker = TerraformTagChecker(files=["test.tf"], config_file=temp_file)
+
+                # Should have fallen back to JSON parsing
+                assert len(checker.required_tags) == 1
+                assert checker.required_tags[0]["name"] == "Environment"
+                assert len(checker.optional_tags) == 1
+
+                # Verify warning was printed
+                captured = capsys.readouterr()
+                assert "PyYAML not installed" in captured.err
+            finally:
+                # Restore yaml module
+                if yaml_module is None:
+                    sys.modules.pop("yaml", None)
+                else:
+                    sys.modules["yaml"] = yaml_module
+        finally:
+            Path(temp_file).unlink()
+
+    def test_load_config_pyyaml_not_available_json_parse_error(self, capsys):
+        """Test error handling when PyYAML unavailable and JSON parsing fails."""
+        # Create invalid JSON file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write("this is not valid JSON or YAML")
+            f.flush()
+            temp_file = f.name
+
+        try:
+            # Use sys.modules to block yaml import
+            import sys
+
+            yaml_module = sys.modules.get("yaml", None)
+            sys.modules["yaml"] = None  # Setting to None causes import to fail
+            try:
+                with pytest.raises(SystemExit) as exc_info:
+                    TerraformTagChecker(files=["test.tf"], config_file=temp_file)
+
+                assert exc_info.value.code == 1
+
+                # Verify error was printed
+                captured = capsys.readouterr()
+                assert (
+                    "Could not parse config file as JSON" in captured.err
+                    or "PyYAML not installed" in captured.err
+                )
+            finally:
+                # Restore yaml module
+                if yaml_module is None:
+                    sys.modules.pop("yaml", None)
+                else:
+                    sys.modules["yaml"] = yaml_module
+        finally:
+            Path(temp_file).unlink()
+
     def test_load_config_nonexistent_file(self, capsys):
         """Test loading config from nonexistent file."""
         checker = TerraformTagChecker(
@@ -618,9 +692,10 @@ class TestCheckAllFiles:
 
     def test_check_all_files_pass(self):
         """Test checking all files when all pass."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".tf", delete=False
-        ) as f1, tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f2:
+        with (
+            tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f1,
+            tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f2,
+        ):
             f1.write(
                 """
 resource "aws_instance" "test1" {
@@ -653,9 +728,10 @@ resource "aws_instance" "test2" {
 
     def test_check_all_files_mixed_results(self):
         """Test checking all files when some fail."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".tf", delete=False
-        ) as f1, tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f2:
+        with (
+            tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f1,
+            tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f2,
+        ):
             f1.write(
                 """
 resource "aws_instance" "test1" {

@@ -36,14 +36,13 @@ repos:
         files: ^test/.*\.py$
       - id: no-commit-to-branch
         args: [--branch, develop, --branch, main, --branch, master]
-      - id: pretty-format-json
       - id: requirements-txt-fixer
       - id: sort-simple-yaml
       - id: trailing-whitespace
 
   # Python formatting and linting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.5
+    rev: v0.14.10
     hooks:
       - id: ruff-check
         args: [--fix]
@@ -51,7 +50,7 @@ repos:
 
   # Python type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+    rev: v1.19.1
     hooks:
       - id: mypy
         files: ^src/.*\.py$
@@ -59,7 +58,7 @@ repos:
 
   # Security: Bandit - finds common security issues
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.9.1
+    rev: 1.9.2
     hooks:
       - id: bandit
         args: ['-c', 'pyproject.toml']
@@ -75,7 +74,7 @@ repos:
 
   # Security: pip-audit - audit Python packages for known vulnerabilities
   - repo: https://github.com/pypa/pip-audit
-    rev: v2.9.0
+    rev: v2.10.0
     hooks:
       - id: pip-audit
         args: ["-r", "requirements.txt"]

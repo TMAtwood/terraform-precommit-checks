@@ -16,7 +16,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 
 class TerraformTagChecker:
@@ -270,11 +270,11 @@ class TerraformTagChecker:
 
     def __init__(
         self,
-        files: List[str],
-        config_file: Optional[str] = None,
-        required_tags: Optional[List[Dict[str, Any]]] = None,
-        optional_tags: Optional[List[Dict[str, str]]] = None,
-        taggable_resources: Optional[Dict[str, List[str]]] = None,
+        files: list[str],
+        config_file: str | None = None,
+        required_tags: list[dict[str, Any]] | None = None,
+        optional_tags: list[dict[str, str]] | None = None,
+        taggable_resources: dict[str, list[str]] | None = None,
     ):
         """
         Initialize the tag checker.
@@ -287,7 +287,7 @@ class TerraformTagChecker:
             taggable_resources: Custom taggable resources dict (from config)
         """
         self.files = files
-        self.errors: List[Tuple[str, int, str, str]] = []  # file, line, resource, msg
+        self.errors: list[tuple[str, int, str, str]] = []  # file, line, resource, msg
         self.config_file = config_file
 
         # Load configuration
@@ -296,30 +296,30 @@ class TerraformTagChecker:
         )
 
         # Extract configuration
-        self.required_tags: List[Dict[str, Any]] = self.config.get("required_tags", [])
-        self.optional_tags: List[Dict[str, str]] = self.config.get("optional_tags", [])
-        self.taggable_resources: Dict[str, List[str]] = self.config.get(
+        self.required_tags: list[dict[str, Any]] = self.config.get("required_tags", [])
+        self.optional_tags: list[dict[str, str]] = self.config.get("optional_tags", [])
+        self.taggable_resources: dict[str, list[str]] = self.config.get(
             "taggable_resources", self.DEFAULT_TAGGABLE_RESOURCES
         )
 
         # Build tag name sets for quick lookup
-        self.required_tag_names: Set[str] = {tag["name"] for tag in self.required_tags}
-        self.optional_tag_names: Set[str] = {tag["name"] for tag in self.optional_tags}
-        self.all_valid_tag_names: Set[str] = self.required_tag_names | self.optional_tag_names
+        self.required_tag_names: set[str] = {tag["name"] for tag in self.required_tags}
+        self.optional_tag_names: set[str] = {tag["name"] for tag in self.optional_tags}
+        self.all_valid_tag_names: set[str] = self.required_tag_names | self.optional_tag_names
 
     def _load_config(
         self,
-        config_file: Optional[str],
-        required_tags: Optional[List[Dict[str, Any]]],
-        optional_tags: Optional[List[Dict[str, str]]],
-        taggable_resources: Optional[Dict[str, List[str]]],
-    ) -> Dict[str, Any]:
+        config_file: str | None,
+        required_tags: list[dict[str, Any]] | None,
+        optional_tags: list[dict[str, str]] | None,
+        taggable_resources: dict[str, list[str]] | None,
+    ) -> dict[str, Any]:
         """
         Load configuration from file or arguments.
 
         Priority: args > config_file > defaults
         """
-        config: Dict[str, Any] = {
+        config: dict[str, Any] = {
             "required_tags": [],
             "optional_tags": [],
             "taggable_resources": self.DEFAULT_TAGGABLE_RESOURCES,
@@ -383,7 +383,7 @@ class TerraformTagChecker:
 
     def extract_tags_from_resource(
         self, content: str, resource_start: int, resource_type: str
-    ) -> Tuple[Optional[Dict[str, str]], Optional[int]]:
+    ) -> tuple[dict[str, str] | None, int | None]:
         """
         Extract tags/labels from a resource block.
 
@@ -459,7 +459,7 @@ class TerraformTagChecker:
         self,
         resource_type: str,
         resource_name: str,
-        tags: Dict[str, str],
+        tags: dict[str, str],
         file_path: str,
         line_num: int,
     ) -> None:
@@ -563,7 +563,7 @@ class TerraformTagChecker:
         self,
         resource_type: str,
         resource_name: str,
-        tags: Dict[str, str],
+        tags: dict[str, str],
         file_path: str,
         line_num: int,
     ) -> None:
@@ -705,14 +705,14 @@ class TerraformTagChecker:
         print("\n" + "=" * 80 + "\n", file=sys.stderr)
 
 
-def parse_tag_list_arg(arg: str) -> List[Dict[str, Any]]:
+def parse_tag_list_arg(arg: str) -> list[dict[str, Any]]:
     """
     Parse a tag list argument in JSON format.
 
     Example: '[{"name":"Environment","allowed_values":["Dev","Prod"]},{"name":"Owner"}]'
     """
     try:
-        result: List[Dict[str, Any]] = json.loads(arg)
+        result: list[dict[str, Any]] = json.loads(arg)
         return result
     except json.JSONDecodeError as e:
         print(f"❌ Error parsing tag list: {e}", file=sys.stderr)

@@ -19,9 +19,14 @@
       "Bash(pytest:*)",
       "Bash(pip install:*)",
       "Bash(pre-commit clean:*)",
-      "Bash(pre-commit install:*)"
+      "Bash(pre-commit install:*)",
+      "Bash(done)",
+      "Bash(grep:*)",
+      "Bash(ruff check:*)",
+      "Bash(ls:*)",
+      "Bash(git tag:*)"
     ],
-    "ask": [],
-    "deny": []
+    "deny": [],
+    "ask": []
   }
 }

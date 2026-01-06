@@ -24,7 +24,6 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 
 class ProviderConfigChecker:
@@ -41,9 +40,9 @@ class ProviderConfigChecker:
     # Pattern to check if we're in a module (not root)
     MODULE_INDICATORS = ["variables.tf", "outputs.tf"]
 
-    def __init__(self, files: List[str]):
+    def __init__(self, files: list[str]):
         self.files = files
-        self.errors: List[Tuple[str, int, str]] = []
+        self.errors: list[tuple[str, int, str]] = []
 
     def is_module_directory(self, file_path: Path) -> bool:
         """Determine if a file is part of a module (not root)."""
