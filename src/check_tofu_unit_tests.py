@@ -11,7 +11,6 @@ import io
 import subprocess  # nosec B404
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 # Ensure UTF-8 output on Windows
 if sys.platform == "win32":
@@ -19,7 +18,7 @@ if sys.platform == "win32":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 
-def find_test_directory() -> Optional[Path]:
+def find_test_directory() -> Path | None:
     """
     Automatically detect the TOFU test directory.
 
@@ -69,7 +68,7 @@ def find_test_directory() -> Optional[Path]:
     return None
 
 
-def get_test_subdirectory(test_dir: Path) -> Optional[str]:
+def get_test_subdirectory(test_dir: Path) -> str | None:
     """
     Detect if test files are in subdirectories and need -test-directory flag.
 
@@ -90,7 +89,7 @@ def get_test_subdirectory(test_dir: Path) -> Optional[str]:
     return None
 
 
-def run_tofu_test(test_dir: Path, verbose: bool = False, command: Optional[str] = None) -> int:
+def run_tofu_test(test_dir: Path, verbose: bool = False, command: str | None = None) -> int:
     """
     Run TOFU test command in the specified directory.
 
@@ -166,7 +165,7 @@ def run_tofu_test(test_dir: Path, verbose: bool = False, command: Optional[str] 
     return 1
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """
     Main entry point for the TOFU test checker.
 

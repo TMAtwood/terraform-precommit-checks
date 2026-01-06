@@ -25,7 +25,7 @@ import shutil
 import subprocess  # nosec B404 - subprocess is used safely with list arguments
 import sys
 from pathlib import Path
-from typing import List, NamedTuple, Optional, Tuple
+from typing import NamedTuple
 
 # Ensure UTF-8 output on Windows
 if sys.platform == "win32":
@@ -51,7 +51,7 @@ class TFSortChecker:
     LOCALS_PATTERN = re.compile(r"^\s*locals\s*\{", re.MULTILINE)
     TERRAFORM_PATTERN = re.compile(r"^\s*terraform\s*\{", re.MULTILINE)
 
-    def __init__(self, files: List[str], use_tfsort_binary: bool = True):
+    def __init__(self, files: list[str], use_tfsort_binary: bool = True):
         """Initialize checker with list of files to check.
 
         Args:
@@ -60,12 +60,12 @@ class TFSortChecker:
                              If False, uses built-in block order checking only.
         """
         self.files = files
-        self.errors: List[Tuple[str, int, str]] = []
+        self.errors: list[tuple[str, int, str]] = []
         self.use_tfsort_binary = use_tfsort_binary
-        self._tfsort_path: Optional[str] = None
+        self._tfsort_path: str | None = None
         self._tfsort_checked = False
 
-    def _find_tfsort(self) -> Optional[str]:
+    def _find_tfsort(self) -> str | None:
         """Find the tfsort binary in PATH.
 
         Returns:
@@ -78,7 +78,7 @@ class TFSortChecker:
         self._tfsort_path = shutil.which("tfsort")
         return self._tfsort_path
 
-    def _check_with_tfsort_binary(self, file_path: str) -> Optional[Tuple[bool, str]]:
+    def _check_with_tfsort_binary(self, file_path: str) -> tuple[bool, str] | None:
         """Check a file using the tfsort binary's dry-run mode.
 
         Args:
@@ -167,7 +167,7 @@ class TFSortChecker:
 
         return len(content)
 
-    def extract_blocks(self, content: str, block_type: str) -> List[BlockInfo]:
+    def extract_blocks(self, content: str, block_type: str) -> list[BlockInfo]:
         """
         Extract all blocks of a given type from content.
 
@@ -178,7 +178,7 @@ class TFSortChecker:
         Returns:
             List of BlockInfo objects
         """
-        blocks: List[BlockInfo] = []
+        blocks: list[BlockInfo] = []
 
         if block_type == "variable":
             pattern = self.VARIABLE_PATTERN
@@ -214,8 +214,8 @@ class TFSortChecker:
         return blocks
 
     def check_block_order(
-        self, blocks: List[BlockInfo], file_path: str
-    ) -> List[Tuple[str, int, str]]:
+        self, blocks: list[BlockInfo], file_path: str
+    ) -> list[tuple[str, int, str]]:
         """
         Check if blocks are in alphabetical order.
 
@@ -226,7 +226,7 @@ class TFSortChecker:
         Returns:
             List of error tuples (file_path, line_number, error_message)
         """
-        errors: List[Tuple[str, int, str]] = []
+        errors: list[tuple[str, int, str]] = []
 
         if len(blocks) <= 1:
             return errors
@@ -237,7 +237,7 @@ class TFSortChecker:
 
         if block_names != sorted_names:
             # Find first out-of-order block
-            for i, (current, expected) in enumerate(zip(block_names, sorted_names)):
+            for i, (current, expected) in enumerate(zip(block_names, sorted_names, strict=True)):
                 if current != expected:
                     line_num = blocks[i].line_number
                     current_order = ", ".join(block_names)

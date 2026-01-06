@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Validate') {
+            steps {
+                sh 'terraform init -backend=false'
+                sh 'terraform validate'
+            }
+        }
+
+        stage('Format Check') {
+            steps {
+                sh 'terraform fmt -check -recursive'
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh 'tfsec .'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'terraform test'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}

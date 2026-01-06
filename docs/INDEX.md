@@ -63,7 +63,22 @@ This repository provides a comprehensive suite of **provider-agnostic** pre-comm
 
 - [TAG_VALIDATION.md](TAG_VALIDATION.md) - Complete guide with configuration examples
 
-### 5. Unit Test Runner (`check-tofu-unit-tests`)
+### 5. Template Sync Checker (`check-template-sync`)
+
+**Purpose:** Validates repository scaffold files match a reference template directory.
+
+**What it validates:**
+
+- All directories in template exist in repository
+- All scaffold files exist in repository
+- File content matches exactly (SHA256 hash comparison)
+- No missing or modified scaffold files
+
+**Why it matters:** Ensures consistency across multiple modules/repositories. Perfect for organizations maintaining multiple Terraform modules that should share common scaffold files (`.editorconfig`, `.gitignore`, `Jenkinsfile`, `.terraform-tags.yaml`, etc.).
+
+**Stage:** Manual (run with `pre-commit run check-template-sync --hook-stage manual`)
+
+### 6. Unit Test Runner (`check-tofu-unit-tests`)
 
 **Purpose:** Runs Terraform/OpenTofu unit tests automatically.
 
@@ -75,7 +90,7 @@ This repository provides a comprehensive suite of **provider-agnostic** pre-comm
 
 **Stage:** Manual (run with `pre-commit run check-tofu-unit-tests`)
 
-### 6. Integration Test Runner (`check-tofu-integration-tests`)
+### 7. Integration Test Runner (`check-tofu-integration-tests`)
 
 **Purpose:** Runs Terraform/OpenTofu integration tests automatically.
 
@@ -103,6 +118,8 @@ repos:
       - id: check-terraform-tags
         args: [--config, .terraform-tags.yaml]
       # Manual hooks (run separately)
+      # - id: check-template-sync
+      #   args: [--template-path, /path/to/your/template]
       # - id: check-tofu-unit-tests
       # - id: check-tofu-integration-tests
 
@@ -123,6 +140,7 @@ pre-commit run check-tfsort --all-files
 pre-commit run check-terraform-tags --all-files
 
 # Run manual stage hooks
+pre-commit run check-template-sync --hook-stage manual
 pre-commit run check-tofu-unit-tests --hook-stage manual
 pre-commit run check-tofu-integration-tests --hook-stage manual
 ```
@@ -197,6 +215,9 @@ python src/check_tfsort.py variables.tf
 # Tag validation
 python src/check_terraform_tags.py --config .terraform-tags.yaml main.tf
 
+# Template sync
+python src/check_template_sync.py --template-path /path/to/template
+
 # Unit tests
 python src/check_tofu_unit_tests.py
 
@@ -212,6 +233,7 @@ python src/check_tofu_integration_tests.py
 | Module Versions | Version conflicts, drift | Reproducible deployments |
 | TFSort | Merge conflicts, inconsistency | Clean, readable code |
 | Tag Validation | Missing tags, typos, wrong values | Compliance, cost tracking |
+| Template Sync | Repository drift, inconsistent scaffolding | Standardized module structure |
 | Unit Tests | Breaking changes | Confident refactoring |
 | Integration Tests | Deployment failures | Production readiness |
 
@@ -233,6 +255,7 @@ terraform-precommit-checks/
 │   ├── check_module_versions.py
 │   ├── check_tfsort.py
 │   ├── check_terraform_tags.py
+│   ├── check_template_sync.py
 │   ├── check_tofu_unit_tests.py
 │   └── check_tofu_integration_tests.py
 ├── docs/                                   # Documentation
